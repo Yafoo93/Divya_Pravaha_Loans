@@ -1,0 +1,693 @@
+{
+  "document": {
+    "title": "Divya Pravaha Loan Management System Requirements",
+    "version": "1.1",
+    "status": "working_baseline_pending_management_legal_and_accounting_signoff",
+    "supersedes": "Divya Pravaha Detailed System Requirements v1.0",
+    "prepared_date": "2026-10-15",
+    "currency": "GHS",
+    "money_storage": "integer_minor_units_pesewas",
+    "jurisdiction": "Ghana",
+    "notes": [
+      "This file converts the v1.0 narrative requirements and management clarifications into testable rules.",
+      "Items marked provisional are proposed company decisions and require formal sign-off.",
+      "Items marked legal_pending must not be enabled in production until legal and regulatory approval is recorded."
+    ]
+  },
+  "product_scope": {
+    "objective": "Manage group-based microcredit from borrower onboarding through loan closure, cash collection, accounting, capital attribution and, after legal approval, investor contracts.",
+    "initial_operating_model": {
+      "branches": "one_or_more",
+      "collection_channel": "cash_only",
+      "mobile_money_enabled": false,
+      "bank_payment_enabled": false,
+      "offline_collection_enabled": false,
+      "investor_module_production_enabled": false
+    },
+    "out_of_scope_for_initial_release": [
+      "Mobile Money collection",
+      "bank-transfer collection",
+      "customer self-service mobile application",
+      "automated credit scoring",
+      "penalty and late-fee calculation",
+      "loan restructuring",
+      "loan write-off posting",
+      "offline payment capture",
+      "production investor transactions before legal approval"
+    ]
+  },
+  "roles": [
+    {
+      "code": "SYSTEM_ADMIN",
+      "permissions": ["manage_users", "manage_roles", "manage_security_configuration"],
+      "restrictions": ["cannot_approve_loans_by_default", "cannot_post_or_reverse_finance_by_default"]
+    },
+    {
+      "code": "MANAGER",
+      "permissions": ["approve_or_reject_loans", "approve_exceptions", "approve_disbursements", "resolve_operational_disputes"]
+    },
+    {
+      "code": "LOAN_OFFICER",
+      "permissions": ["manage_borrower_drafts", "manage_groups", "record_verification", "submit_loan_applications"]
+    },
+    {
+      "code": "FIELD_COLLECTOR",
+      "permissions": ["view_assignments", "record_cash_receipts", "submit_cash_handovers"],
+      "restrictions": ["cannot_verify_own_handover", "cannot_reverse_posted_receipts"]
+    },
+    {
+      "code": "CASHIER_ACCOUNTANT",
+      "permissions": ["verify_cash_handovers", "post_reconciled_receipts", "manage_ledger", "perform_reconciliation", "prepare_period_close"]
+    },
+    {
+      "code": "INVESTOR_PORTFOLIO_OFFICER",
+      "permissions": ["prepare_investor_records", "prepare_contracts", "prepare_payout_requests"],
+      "feature_gate": "investor_module_legal_approval"
+    },
+    {
+      "code": "AUDITOR",
+      "permissions": ["read_financial_history", "read_audit_events", "read_exception_reports"],
+      "restrictions": ["read_only"]
+    },
+    {
+      "code": "INVESTOR_PORTAL_USER",
+      "permissions": ["view_own_contracts", "view_own_statements", "view_own_maturities"],
+      "restrictions": ["own_records_only", "read_only"],
+      "feature_gate": "investor_module_legal_approval"
+    }
+  ],
+  "security": {
+    "authorization": "server_side_rbac_on_every_read_and_mutation",
+    "mfa_required_roles": ["SYSTEM_ADMIN", "MANAGER", "CASHIER_ACCOUNTANT", "INVESTOR_PORTFOLIO_OFFICER"],
+    "maker_checker_required_for": [
+      "loan_approval",
+      "disbursement",
+      "receipt_reversal",
+      "period_reopening",
+      "investor_payout",
+      "manual_financial_adjustment"
+    ],
+    "maker_cannot_be_checker": true,
+    "audit_log": "append_only",
+    "posted_financial_record_deletion": "prohibited",
+    "private_documents": {
+      "storage": "encrypted_private_object_storage",
+      "public_urls": false,
+      "access_logged": true,
+      "malware_scan_required": true
+    }
+  },
+  "borrowers_and_groups": {
+    "borrower_required_fields": [
+      "customer_id",
+      "legal_name",
+      "phone",
+      "address",
+      "business_details",
+      "ghana_card_number",
+      "ghana_card_verification_status",
+      "consent_record"
+    ],
+    "minimum_verified_members_to_activate_group": 5,
+    "maximum_group_size": null,
+    "maximum_group_size_status": "management_signoff_required",
+    "membership_history": "effective_dated_never_overwritten",
+    "guarantee_snapshot": "captured_when_each_loan_is_approved",
+    "joint_liability_agreement_required": true,
+    "group_liability_commitment_starts": "when_the_company_activates_the_group_after_all_required_members_consent",
+    "member_exit": {
+      "future_loans": "excluded_after_effective_exit_date",
+      "existing_loans": "obligations_from_the_approval_snapshot_remain_until_those_loans_close",
+      "provisional": true
+    },
+    "blacklisting": {
+      "trigger": "member_is_suspended_exited_for_default_or_is_delinquent_and_management_confirms_the_status",
+      "effect": "block_new_applications_and_new_group_membership_approval",
+      "reactivation": "manager_approval_after_documented_group_vouching_and_fresh_verification",
+      "automatic_deletion": false,
+      "provisional": true
+    }
+  },
+  "loan_product": {
+    "product_code": "GROUP_FLAT_20",
+    "interest_method": "flat_once_for_full_contract_term",
+    "interest_rate": 0.20,
+    "interest_formula": "original_principal_minor_units * 0.20",
+    "contractual_total_formula": "original_principal_minor_units + contractual_interest_minor_units",
+    "maximum_term_months": 6,
+    "minimum_term": "one_repayment_interval",
+    "allowed_frequencies": ["WEEKLY", "FORTNIGHTLY", "MONTHLY"],
+    "fees_enabled": false,
+    "penalties_enabled": false,
+    "waivers_enabled": false,
+    "restructuring_enabled": false,
+    "write_off_enabled": false,
+    "repeat_borrowing": {
+      "historical_loans_allowed": true,
+      "maximum_active_loans_per_borrower": 1,
+      "maximum_nonterminal_applications_per_borrower": 1,
+      "provisional": true
+    },
+    "early_settlement": {
+      "allowed": true,
+      "interest_rebate": false,
+      "amount_due": "remaining_principal_plus_all_remaining_contractual_interest_plus_any_posted_non_penalty_adjustments",
+      "refund": "only_a_verified_overpayment_is_refundable"
+    }
+  },
+  "repayment_schedule": {
+    "schedule_anchor": "actual_disbursement_date",
+    "first_due_date": {
+      "WEEKLY": "disbursement_date_plus_7_calendar_days",
+      "FORTNIGHTLY": "disbursement_date_plus_14_calendar_days",
+      "MONTHLY": "one_calendar_month_after_disbursement_date"
+    },
+    "subsequent_due_dates": {
+      "WEEKLY": "previous_contractual_due_date_plus_7_calendar_days",
+      "FORTNIGHTLY": "previous_contractual_due_date_plus_14_calendar_days",
+      "MONTHLY": "same_day_of_month_as_disbursement_or_last_calendar_day_if_that_day_does_not_exist"
+    },
+    "weekend_and_public_holiday_rule": {
+      "rule": "move_collection_due_date_to_next_business_day",
+      "does_not_count_as_grace": true,
+      "provisional": true,
+      "reason": "cash-only collection cannot reliably be completed when company collection operations are closed"
+    },
+    "grace_period_days": 0,
+    "delinquency_starts": "immediately_after_the_effective_due_date_if_the_required_amount_is_not_fully_paid",
+    "instalment_calculation": {
+      "number_of_instalments": "derived_from_approved_term_and_frequency_and_frozen_in_the_signed_contract",
+      "total_instalment_amounts": "contractual_total_divided_by_number_of_instalments",
+      "rounding": "round_each_nonfinal_instalment_to_nearest_pesewa_half_up_and_put_the_exact_remainder_in_the_final_instalment",
+      "component_allocation": "calculate_principal_and_interest_schedule_components_from_the_contract_totals; for a pure 20_percent_flat_loan this is five_sixths_principal_and_one_sixth_interest before rounding",
+      "principal_share_approx_percent": 83.333333,
+      "interest_share_approx_percent": 16.666667,
+      "requested_80_20_rule_rejected_reason": "allocating 80_percent_principal_and_20_percent_interest_to_total_repayment_would_collect_interest_equal_to_24_percent_of_original_principal_and recover_only_96_percent_of_original_principal"
+    }
+  },
+  "loan_lifecycle": {
+    "states": [
+      "DRAFT",
+      "SUBMITTED",
+      "UNDER_REVIEW",
+      "APPROVED",
+      "REJECTED",
+      "AWAITING_DISBURSEMENT",
+      "ACTIVE",
+      "CLOSED",
+      "CANCELLED"
+    ],
+    "reserved_future_states": ["RESTRUCTURED", "WRITTEN_OFF"],
+    "approval_requires": ["manager", "timestamp", "decision_reason", "approved_terms_snapshot"],
+    "approved_term_change": "requires_new_controlled_approval",
+    "disbursement_requires": [
+      "approved_loan",
+      "verified_funding_source",
+      "beneficiary_confirmation",
+      "cash_voucher",
+      "manager_authorization",
+      "unique_transaction_reference",
+      "idempotency_key",
+      "balanced_journal_entry"
+    ]
+  },
+  "cash_collections": {
+    "enabled_channels": ["CASH"],
+    "disabled_channels": ["MOBILE_MONEY", "BANK_TRANSFER", "CARD", "CHEQUE"],
+    "receipt_statuses": ["CAPTURED", "HANDED_OVER", "VERIFIED", "POSTED", "REVERSED"],
+    "borrower_payment_recognition": "recognized_when_collector_issues_a_uniquely_numbered_receipt",
+    "cash_availability_for_re_lending": "only_after_cash_handover_is_independently_verified_and_posted_to_company_cash_on_hand",
+    "collector_may_relend_directly": false,
+    "allocation_override_allowed": false,
+    "partial_payment_allowed": true,
+    "payment_allocation": {
+      "method": "pro_rata_against_due_schedule_components_then_oldest_due_instalment_first",
+      "fees_priority": "not_applicable_because_fees_are_disabled",
+      "excess_after_all_contractual_amounts": "record_as_customer_overpayment_liability_pending_refund"
+    },
+    "overpayment": {
+      "confirm_before_refund": true,
+      "refund_to": "verified_original_payer_or_legally_authorized_owner",
+      "refund_requires": ["payer_identity_verification", "manager_approval", "cashier_payment", "journal_entry", "signed_refund_receipt"],
+      "may_not_be_automatically_applied_to_another_loan": true
+    },
+    "unidentified_cash": {
+      "post_to": "unidentified_receipts_suspense_liability",
+      "affects_borrower_balance": false,
+      "available_for_re_lending": false,
+      "resolution": "identify_and_allocate_or_refund_after_manager_approval"
+    },
+    "corrections": "authorized_reversal_and_repost_only",
+    "backdating": {
+      "receipt_date": "actual_cash_received_date_cannot_be_changed_after_posting",
+      "entry_date": "system_timestamp",
+      "prior_period_posting": false,
+      "provisional": true
+    }
+  },
+  "joint_liability": {
+    "guarantee_is_active": "from_group_activation_and_for_each_loan_from_its_approval_snapshot",
+    "assessment_trigger": "an_instalment_is_unpaid_immediately_after_its_effective_due_date",
+    "grace_period_days": 0,
+    "assessment_requires_manager_approval_before_collection": true,
+    "eligible_contributors": "all_other_members_in_the_loan_guarantee_snapshot_who_have_not_died_and_whose_obligation_has_not_been_legally_released",
+    "current_suspension_or_exit_does_not_erase_prior_snapshot_obligation": true,
+    "allocation": "equal_share_with_deterministic_pesewa_remainder_by_ascending_member_id",
+    "contribution_accounting": "settles_the_original_borrower_receivable_and_does_not_create_new_income",
+    "reimbursement_claims": {
+      "created": false,
+      "reason": "no_company_policy_or_legally_approved_member_reimbursement_right_exists"
+    },
+    "disputes": {
+      "financial_posting_may_not_be_silently_changed": true,
+      "record_notice_and_complaint": true,
+      "resolution_authority": "manager",
+      "waiver_allowed": false,
+      "appeal_process": "not_defined_pending_management_policy",
+      "provisional": true
+    }
+  },
+  "investor_arrangements": {
+    "status": "legal_pending",
+    "production_transactions_enabled": false,
+    "legal_classification": "pending_legal_team",
+    "nominal_return_rate_per_annum": 0.60,
+    "calculation": {
+      "method": "simple_interest_not_compounded",
+      "formula": "invested_principal * 0.60 * contract_days / year_basis_days",
+      "year_basis_days": 365,
+      "leap_year_basis_days": 366,
+      "accrual_frequency": "daily",
+      "provisional": true
+    },
+    "maturity_withdrawal_default_cancellation_tax": "pending_legal_team",
+    "bank_fund_segregation_required_by_company_policy": false,
+    "system_source_attribution_required": true,
+    "warning": "Non-segregation does not override any future legal, regulatory, trust-account or contract requirement.",
+    "activation_gate": [
+      "written_legal_classification",
+      "regulatory_or_licensing_confirmation",
+      "approved_signed_contract_template",
+      "approved_tax_treatment",
+      "approved_payout_and_early_exit_rules",
+      "approved_accounting_treatment",
+      "management_signoff"
+    ]
+  },
+  "accounting_policy": {
+    "status": "provisional_pending_qualified_accountant_signoff",
+    "basis": "accrual",
+    "double_entry_required": true,
+    "journal_rules": {
+      "balanced_debits_and_credits": true,
+      "posted_entries_immutable": true,
+      "correction_method": "linked_reversal_and_new_entry",
+      "manual_entries_require_maker_checker": true,
+      "source_event_and_actor_required": true
+    },
+    "chart_of_accounts": [
+      {"code": "1000", "name": "Cash on Hand", "type": "ASSET"},
+      {"code": "1010", "name": "Collector Cash Custody", "type": "ASSET"},
+      {"code": "1020", "name": "Operating Bank", "type": "ASSET"},
+      {"code": "1100", "name": "Loan Principal Receivable", "type": "ASSET"},
+      {"code": "1110", "name": "Interest Receivable", "type": "ASSET"},
+      {"code": "1120", "name": "Allowance for Credit Losses", "type": "CONTRA_ASSET"},
+      {"code": "1200", "name": "Prepayments and Other Assets", "type": "ASSET"},
+      {"code": "2000", "name": "Unidentified Receipts Suspense", "type": "LIABILITY"},
+      {"code": "2010", "name": "Customer Overpayments Refundable", "type": "LIABILITY"},
+      {"code": "2100", "name": "Investor Principal Liability", "type": "LIABILITY", "feature_gate": "investor_module_legal_approval"},
+      {"code": "2110", "name": "Investor Returns Payable", "type": "LIABILITY", "feature_gate": "investor_module_legal_approval"},
+      {"code": "2200", "name": "Other Payables", "type": "LIABILITY"},
+      {"code": "3000", "name": "Owner Capital", "type": "EQUITY"},
+      {"code": "3100", "name": "Retained Earnings", "type": "EQUITY"},
+      {"code": "4000", "name": "Loan Interest Income", "type": "INCOME"},
+      {"code": "4900", "name": "Other Income", "type": "INCOME"},
+      {"code": "5000", "name": "Investor Return Expense", "type": "EXPENSE", "feature_gate": "investor_module_legal_approval"},
+      {"code": "5100", "name": "Credit Loss Expense", "type": "EXPENSE"},
+      {"code": "5900", "name": "Operating Expenses", "type": "EXPENSE"}
+    ],
+    "recognition": {
+      "loan_principal": "recognize_principal_receivable_when_cash_is_disbursed",
+      "loan_interest": "accrue_contractual_flat_interest over the contractual term in proportion to elapsed calendar days; cash allocation reduces accrued interest receivable and unearned amounts are not recognized as income early",
+      "cash_receipt": "recognize collector custody at receipt issuance and transfer to cash_on_hand only after verified handover",
+      "investor_return": "after_legal_activation_accrue_daily_using_the_approved_simple_interest_basis",
+      "cash_flow_reporting": "based_on_actual_cash_movements"
+    },
+    "event_journal_matrix": [
+      {
+        "event": "LOAN_DISBURSED_CASH",
+        "debit": "1100 Loan Principal Receivable",
+        "credit": "1000 Cash on Hand",
+        "amount": "principal"
+      },
+      {
+        "event": "LOAN_INTEREST_ACCRUED",
+        "debit": "1110 Interest Receivable",
+        "credit": "4000 Loan Interest Income",
+        "amount": "daily_contractual_interest_accrual"
+      },
+      {
+        "event": "BORROWER_CASH_RECEIVED_BY_COLLECTOR_PRINCIPAL",
+        "debit": "1010 Collector Cash Custody",
+        "credit": "1100 Loan Principal Receivable",
+        "amount": "principal_component"
+      },
+      {
+        "event": "BORROWER_CASH_RECEIVED_BY_COLLECTOR_INTEREST",
+        "debit": "1010 Collector Cash Custody",
+        "credit": "1110 Interest Receivable",
+        "amount": "interest_component_up_to_accrued_interest"
+      },
+      {
+        "event": "COLLECTOR_HANDOVER_VERIFIED",
+        "debit": "1000 Cash on Hand",
+        "credit": "1010 Collector Cash Custody",
+        "amount": "verified_handover"
+      },
+      {
+        "event": "UNIDENTIFIED_CASH_RECEIVED",
+        "debit": "1000 Cash on Hand",
+        "credit": "2000 Unidentified Receipts Suspense",
+        "amount": "cash_received"
+      },
+      {
+        "event": "CUSTOMER_OVERPAYMENT_CONFIRMED",
+        "debit": "1010 Collector Cash Custody or 1000 Cash on Hand",
+        "credit": "2010 Customer Overpayments Refundable",
+        "amount": "excess_amount"
+      },
+      {
+        "event": "CUSTOMER_OVERPAYMENT_REFUNDED",
+        "debit": "2010 Customer Overpayments Refundable",
+        "credit": "1000 Cash on Hand",
+        "amount": "approved_refund"
+      },
+      {
+        "event": "JOINT_LIABILITY_CONTRIBUTION",
+        "debit": "1010 Collector Cash Custody",
+        "credit": "1100 Loan Principal Receivable and/or 1110 Interest Receivable for original borrower",
+        "amount": "approved_component_allocation"
+      },
+      {
+        "event": "INVESTOR_FUNDS_RECEIVED",
+        "debit": "1000 Cash on Hand or 1020 Operating Bank",
+        "credit": "2100 Investor Principal Liability",
+        "amount": "cleared_investor_principal",
+        "feature_gate": "investor_module_legal_approval"
+      },
+      {
+        "event": "INVESTOR_RETURN_ACCRUED",
+        "debit": "5000 Investor Return Expense",
+        "credit": "2110 Investor Returns Payable",
+        "amount": "daily_approved_return_accrual",
+        "feature_gate": "investor_module_legal_approval"
+      }
+    ],
+    "credit_loss_policy": {
+      "method": "provisional_aging_matrix_subject_to_accountant_and_regulatory_review",
+      "rates": [
+        {"days_past_due_min": 0, "days_past_due_max": 0, "provision_rate": 0.00},
+        {"days_past_due_min": 1, "days_past_due_max": 30, "provision_rate": 0.05},
+        {"days_past_due_min": 31, "days_past_due_max": 60, "provision_rate": 0.25},
+        {"days_past_due_min": 61, "days_past_due_max": 90, "provision_rate": 0.50},
+        {"days_past_due_min": 91, "days_past_due_max": null, "provision_rate": 1.00}
+      ],
+      "write_off_posting_enabled": false,
+      "write_off_policy_required_before_enablement": true,
+      "provision_does_not_cancel_collection_activity": true
+    },
+    "period_close": {
+      "frequency": "monthly",
+      "close_deadline_business_days_after_month_end": 10,
+      "preconditions": [
+        "all_collector_cash_reconciled_or_explained",
+        "cash_count_completed",
+        "all_exceptions_reviewed",
+        "trial_balance_balanced",
+        "required_accruals_posted",
+        "manager_review_completed"
+      ],
+      "closed_period_posting": false,
+      "reopening_requires": ["documented_reason", "accountant_request", "manager_approval", "audit_event"],
+      "reclose_required": true
+    },
+    "required_reports": [
+      "trial_balance",
+      "statement_of_financial_position",
+      "income_statement",
+      "cash_flow_statement",
+      "general_ledger",
+      "loan_portfolio_outstanding",
+      "portfolio_at_risk_by_aging_bucket",
+      "repayment_and_collection_report",
+      "collector_cash_custody_and_handover_report",
+      "interest_accrual_report",
+      "credit_loss_provision_report",
+      "fund_source_and_use_report",
+      "investor_liability_and_maturity_report_after_legal_activation",
+      "reversal_and_exception_report"
+    ],
+    "regulatory_reporting": "pending_confirmation_of_business_licence_and_regulator_requirements"
+  },
+  "capital_traceability": {
+    "general_ledger_is_accounting_truth": true,
+    "source_attribution_is_management_subledger": true,
+    "cash_is_fungible": true,
+    "verified_source_lots": ["owner_capital", "recovered_principal", "investor_principal_after_legal_activation"],
+    "interest_income_available_for_funding": "only_after_cash_handover_verification_and_management_reservation_rules",
+    "prevent_over_allocation": "atomic_database_transaction_with_locked_balance_check",
+    "statuses": ["AVAILABLE", "RESERVED", "COMMITTED", "DISBURSED", "RECOVERED", "CANCELLED"],
+    "receivables_are_not_available_cash": true
+  },
+  "data_and_audit": {
+    "primary_keys": "immutable_generated_identifiers",
+    "human_references": "unique_sequential_or_collision_resistant_business_references",
+    "timestamps": "UTC_storage_with_Africa_Accra_display",
+    "financial_event_idempotency": true,
+    "cascade_delete_posted_finance": false,
+    "effective_dating_required_for": ["memberships", "agreements", "loan_product_versions", "permissions"],
+    "retention_policy": "pending_legal_and_management_signoff",
+    "data_controller_registration_and_privacy_review": "required_before_production"
+  },
+  "nonfunctional_requirements": {
+    "architecture": "modular_monolith",
+    "stack": ["Next.js App Router", "TypeScript", "PostgreSQL", "Prisma", "Tailwind CSS"],
+    "financial_logic_location": "server_only_domain_services",
+    "database_transactions_required_for": [
+      "disbursement",
+      "payment_posting",
+      "reversal",
+      "cash_handover",
+      "fund_reservation_and_allocation",
+      "investor_payout"
+    ],
+    "responsive_mobile_web": true,
+    "accessibility": ["keyboard_navigation", "readable_contrast", "labelled_forms", "printable_receipts"],
+    "backup": {
+      "encrypted_offsite": true,
+      "frequency": "daily_full_or_equivalent_point_in_time_recovery",
+      "restoration_test_frequency": "quarterly",
+      "provisional_rpo_hours": 24,
+      "provisional_rto_hours": 8
+    },
+    "observability": [
+      "health_checks",
+      "error_monitoring",
+      "failed_job_alerts",
+      "backup_failure_alerts",
+      "reconciliation_warnings",
+      "security_event_logging"
+    ]
+  },
+  "acceptance_tests": [
+    {
+      "id": "AT-001",
+      "given": "a group has four verified consenting members",
+      "when": "activation is requested",
+      "then": "activation is rejected"
+    },
+    {
+      "id": "AT-002",
+      "given": "a GHS 10000 loan",
+      "when": "the contract is generated",
+      "then": "interest is GHS 2000 and total repayment is GHS 12000 regardless of a term up to six months"
+    },
+    {
+      "id": "AT-003",
+      "given": "a weekly cash loan disbursed on a Monday",
+      "when": "the schedule is generated",
+      "then": "the first contractual due date is seven calendar days later"
+    },
+    {
+      "id": "AT-004",
+      "given": "a monthly loan disbursed on January 31",
+      "when": "February has no 31st",
+      "then": "the February contractual due date is the last calendar day of February"
+    },
+    {
+      "id": "AT-005",
+      "given": "a due date is a non-business day",
+      "when": "delinquency is evaluated",
+      "then": "the loan is not delinquent until the next business-day collection date has passed"
+    },
+    {
+      "id": "AT-006",
+      "given": "an instalment becomes unpaid after its effective due date",
+      "when": "delinquency is evaluated",
+      "then": "days past due starts immediately with zero grace days"
+    },
+    {
+      "id": "AT-007",
+      "given": "a pure flat-20-percent contract",
+      "when": "an instalment is allocated",
+      "then": "scheduled components total exactly the original principal and 20-percent contractual interest using final-instalment rounding"
+    },
+    {
+      "id": "AT-008",
+      "given": "a borrower settles early",
+      "when": "the payoff quote is generated",
+      "then": "no interest rebate is applied and all remaining contractual interest is due"
+    },
+    {
+      "id": "AT-009",
+      "given": "a collector records cash",
+      "when": "handover has not been verified",
+      "then": "the receipt reduces borrower debt but the cash cannot fund a new loan"
+    },
+    {
+      "id": "AT-010",
+      "given": "cash cannot be identified to a borrower",
+      "when": "it is received",
+      "then": "it is posted to suspense and does not reduce any borrower balance"
+    },
+    {
+      "id": "AT-011",
+      "given": "a verified overpayment exists",
+      "when": "refund is approved",
+      "then": "the verified payer receives it and the liability and cash accounts are reduced"
+    },
+    {
+      "id": "AT-012",
+      "given": "one borrower misses GHS 100 and four eligible guarantors remain",
+      "when": "the manager approves joint-liability assessment",
+      "then": "each guarantor is assessed GHS 25 and payments reduce the original borrower receivable"
+    },
+    {
+      "id": "AT-013",
+      "given": "a member exits after guaranteeing an active loan",
+      "when": "liability eligibility is calculated",
+      "then": "the historical approval snapshot is retained"
+    },
+    {
+      "id": "AT-014",
+      "given": "a posted financial transaction",
+      "when": "a correction is needed",
+      "then": "deletion and editing are rejected and an authorized linked reversal is required"
+    },
+    {
+      "id": "AT-015",
+      "given": "two concurrent disbursements request the same available funding",
+      "when": "both execute",
+      "then": "at most one may reserve or spend each pesewa"
+    },
+    {
+      "id": "AT-016",
+      "given": "the investor module lacks recorded legal approval",
+      "when": "a user attempts to receive investor money or post a payout",
+      "then": "the transaction is blocked"
+    },
+    {
+      "id": "AT-017",
+      "given": "a user is blacklisted",
+      "when": "a new application is submitted",
+      "then": "submission is blocked until documented reactivation is approved"
+    }
+  ],
+  "open_decisions": [
+    {
+      "id": "OD-001",
+      "topic": "maximum_group_size",
+      "owner": "management",
+      "blocks": "final_group_configuration"
+    },
+    {
+      "id": "OD-002",
+      "topic": "joint_liability_appeal_process",
+      "owner": "management_and_legal",
+      "blocks": "fully_automated_joint_liability"
+    },
+    {
+      "id": "OD-003",
+      "topic": "investor_legal_classification_and_regulatory_approval",
+      "owner": "legal_team",
+      "blocks": "all_production_investor_transactions"
+    },
+    {
+      "id": "OD-004",
+      "topic": "investor_maturity_withdrawal_default_cancellation_and_tax",
+      "owner": "legal_finance_and_management",
+      "blocks": "investor_contract_engine"
+    },
+    {
+      "id": "OD-005",
+      "topic": "accounting_policy_and_chart_of_accounts_approval",
+      "owner": "qualified_accountant_and_management",
+      "blocks": "production_financial_reporting"
+    },
+    {
+      "id": "OD-006",
+      "topic": "regulatory_reporting_and_credit_bureau_obligations",
+      "owner": "legal_and_compliance",
+      "blocks": "production_readiness"
+    },
+    {
+      "id": "OD-007",
+      "topic": "data_retention_and_deletion_schedule",
+      "owner": "legal_and_data_protection_lead",
+      "blocks": "production_readiness"
+    }
+  ],
+  "delivery_phases": [
+    {
+      "phase": 0,
+      "name": "Policy and compliance signoff",
+      "exit_criteria": ["loan_policy_signed", "accounting_policy_signed", "licensing_position_confirmed", "privacy_requirements_confirmed"]
+    },
+    {
+      "phase": 1,
+      "name": "Foundation",
+      "deliverables": ["authentication", "RBAC", "MFA", "branches", "borrowers", "groups", "documents", "audit_events"]
+    },
+    {
+      "phase": 2,
+      "name": "Loans and core ledger",
+      "deliverables": ["loan_product_versions", "applications", "approvals", "schedules", "cash_disbursements", "double_entry_journals"]
+    },
+    {
+      "phase": 3,
+      "name": "Cash collection and reconciliation",
+      "deliverables": ["receipts", "allocations", "collector_custody", "handover", "reversals", "daily_reconciliation"]
+    },
+    {
+      "phase": 4,
+      "name": "Arrears and joint liability",
+      "deliverables": ["delinquency", "assessments", "manager_approval", "contributions", "blacklisting"]
+    },
+    {
+      "phase": 5,
+      "name": "Capital attribution",
+      "deliverables": ["fund_lots", "reservations", "source_to_use_traceability", "availability_controls"]
+    },
+    {
+      "phase": 6,
+      "name": "Investor module",
+      "entry_gate": "all_investor_legal_and_accounting_decisions_approved",
+      "deliverables": ["contracts", "return_accrual", "maturities", "payouts", "statements"]
+    },
+    {
+      "phase": 7,
+      "name": "Production readiness",
+      "deliverables": ["reports", "migration", "security_testing", "UAT", "backup_restore_test", "pilot", "training"]
+    }
+  ]
+}
