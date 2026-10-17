@@ -45,10 +45,10 @@ Phase 1 is a **solid functional prototype**, not disconnected mockups. Productio
 
 ### Development tasks
 
-- [ ] Initialize Git and add project setup documentation.
-- [ ] Create a Next.js App Router project with TypeScript.
+- [X] Initialize Git and add project setup documentation.
+- [X] Create a Next.js App Router project with TypeScript.
 - [ ] Configure Tailwind CSS with the royal-blue and white theme.
-- [ ] Configure PostgreSQL and Prisma.
+- [X] Configure PostgreSQL and Prisma.
 - [ ] Add local environment and secret templates.
 - [ ] Add commands for development, migration, seed, lint, test, and build.
 - [ ] Add formatting, linting, type-checking, and test automation.
