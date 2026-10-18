@@ -1,3 +1,5 @@
+import { SampleDataBadge } from "./components/sample-data-banner";
+
 export default function Home() {
   return (
     <main className="bg-background text-foreground min-h-screen px-6 py-16">
@@ -16,9 +18,12 @@ export default function Home() {
         </div>
 
         <div className="p-8">
-          <span className="bg-success/10 text-success rounded-full px-3 py-1 text-sm font-semibold">
-            Initial setup working
-          </span>
+          <div className="flex flex-wrap items-center gap-2">
+            <SampleDataBadge />
+            <span className="bg-success/10 text-success rounded-full px-3 py-1 text-sm font-semibold">
+              Initial setup working
+            </span>
+          </div>
 
           <h2 className="mt-6 text-2xl font-semibold">Phase 1 prototype</h2>
 

@@ -1,8 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Get a free hosted Postgres database in seconds: `npx create-db`
-
 generator client {
   provider = "prisma-client"
   output   = "../src/generated/prisma"
@@ -12,13 +7,283 @@ datasource db {
   provider = "postgresql"
 }
 
+enum BorrowerStatus {
+  ACTIVE
+  RESTRICTED
+}
+
+enum GroupStatus {
+  DRAFT
+  ACTIVE
+  SUSPENDED
+}
+
+enum MembershipStatus {
+  ACTIVE
+  EXITED
+  SUSPENDED
+}
+
+enum LoanStatus {
+  DRAFT
+  SUBMITTED
+  UNDER_REVIEW
+  APPROVED
+  REJECTED
+  AWAITING_DISBURSEMENT
+  ACTIVE
+  CLOSED
+  CANCELLED
+}
+
+enum RepaymentFrequency {
+  WEEKLY
+  FORTNIGHTLY
+  MONTHLY
+}
+
+enum ReceiptStatus {
+  CAPTURED
+  HANDED_OVER
+  VERIFIED
+  POSTED
+  REVERSED
+}
+
+enum ArrearStatus {
+  PENDING_ASSESSMENT
+  APPROVED
+  RESOLVED
+}
+
+enum AccountType {
+  ASSET
+  CONTRA_ASSET
+  LIABILITY
+  EQUITY
+  INCOME
+  EXPENSE
+}
+
+enum JournalStatus {
+  POSTED
+  REVERSED
+}
+
 model Branch {
-  id        String   @id @default(cuid())
-  code      String   @unique @db.VarChar(20)
-  name      String   @db.VarChar(120)
-  isActive  Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id           String          @id @default(cuid())
+  code         String          @unique @db.VarChar(20)
+  name         String          @db.VarChar(120)
+  isActive     Boolean         @default(true)
+  isSampleData Boolean         @default(false)
+  borrowers    Borrower[]
+  groups       BorrowerGroup[]
+  loans        Loan[]
+  receipts     Receipt[]
+  journals     JournalEntry[]
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
 
   @@map("branches")
+}
+
+model Role {
+  id           String   @id @default(cuid())
+  code         String   @unique @db.VarChar(50)
+  name         String   @db.VarChar(100)
+  description  String   @db.VarChar(300)
+  isActive     Boolean  @default(true)
+  isSampleData Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@map("roles")
+}
+
+model Borrower {
+  id                      String            @id @default(cuid())
+  customerId              String            @unique @db.VarChar(30)
+  legalName               String            @db.VarChar(150)
+  phone                   String            @db.VarChar(30)
+  residentialAddress      String            @db.VarChar(250)
+  businessDetails         String            @db.VarChar(500)
+  ghanaCardNumber         String            @unique @db.VarChar(30)
+  ghanaCardVerified       Boolean           @default(false)
+  consentReference        String            @db.VarChar(80)
+  status                  BorrowerStatus    @default(ACTIVE)
+  isSampleData            Boolean           @default(false)
+  branchId                String
+  branch                  Branch            @relation(fields: [branchId], references: [id])
+  memberships             GroupMembership[]
+  loans                   Loan[]
+  receipts                Receipt[]
+  arrears                 Arrear[]
+  guaranteedContributions Arrear[]          @relation("ArrearGuarantor")
+  createdAt               DateTime          @default(now())
+  updatedAt               DateTime          @updatedAt
+
+  @@index([branchId])
+  @@map("borrowers")
+}
+
+model BorrowerGroup {
+  id                      String            @id @default(cuid())
+  groupNumber             String            @unique @db.VarChar(30)
+  name                    String            @db.VarChar(150)
+  status                  GroupStatus       @default(DRAFT)
+  jointLiabilityReference String            @db.VarChar(80)
+  activatedAt             DateTime?
+  isSampleData            Boolean           @default(false)
+  branchId                String
+  branch                  Branch            @relation(fields: [branchId], references: [id])
+  memberships             GroupMembership[]
+  loans                   Loan[]
+  createdAt               DateTime          @default(now())
+  updatedAt               DateTime          @updatedAt
+
+  @@index([branchId])
+  @@map("borrower_groups")
+}
+
+model GroupMembership {
+  id           String           @id @default(cuid())
+  groupId      String
+  borrowerId   String
+  status       MembershipStatus @default(ACTIVE)
+  joinedAt     DateTime
+  exitedAt     DateTime?
+  hasConsented Boolean          @default(true)
+  isSampleData Boolean          @default(false)
+  group        BorrowerGroup    @relation(fields: [groupId], references: [id])
+  borrower     Borrower         @relation(fields: [borrowerId], references: [id])
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  @@unique([groupId, borrowerId])
+  @@index([borrowerId])
+  @@map("group_memberships")
+}
+
+model Loan {
+  id                    String             @id @default(cuid())
+  loanNumber            String             @unique @db.VarChar(30)
+  status                LoanStatus
+  principalPesewas      Int
+  contractualInterest   Int
+  totalRepayablePesewas Int
+  termMonths            Int
+  repaymentFrequency    RepaymentFrequency
+  disbursedAt           DateTime?
+  isSampleData          Boolean            @default(false)
+  branchId              String
+  borrowerId            String
+  groupId               String
+  branch                Branch             @relation(fields: [branchId], references: [id])
+  borrower              Borrower           @relation(fields: [borrowerId], references: [id])
+  group                 BorrowerGroup      @relation(fields: [groupId], references: [id])
+  receipts              Receipt[]
+  arrears               Arrear[]
+  createdAt             DateTime           @default(now())
+  updatedAt             DateTime           @updatedAt
+
+  @@index([branchId])
+  @@index([borrowerId])
+  @@index([groupId])
+  @@map("loans")
+}
+
+model Receipt {
+  id                        String        @id @default(cuid())
+  receiptNumber             String        @unique @db.VarChar(40)
+  amountPesewas             Int
+  principalAllocatedPesewas Int
+  interestAllocatedPesewas  Int
+  status                    ReceiptStatus
+  receivedAt                DateTime
+  isSampleData              Boolean       @default(false)
+  branchId                  String
+  borrowerId                String
+  loanId                    String
+  branch                    Branch        @relation(fields: [branchId], references: [id])
+  borrower                  Borrower      @relation(fields: [borrowerId], references: [id])
+  loan                      Loan          @relation(fields: [loanId], references: [id])
+  createdAt                 DateTime      @default(now())
+  updatedAt                 DateTime      @updatedAt
+
+  @@index([branchId])
+  @@index([borrowerId])
+  @@index([loanId])
+  @@map("receipts")
+}
+
+model Arrear {
+  id                  String       @id @default(cuid())
+  assessmentNumber    String       @unique @db.VarChar(40)
+  effectiveDueDate    DateTime
+  daysPastDue         Int
+  unpaidAmountPesewas Int
+  contributionPesewas Int
+  status              ArrearStatus
+  isSampleData        Boolean      @default(false)
+  loanId              String
+  borrowerId          String
+  guarantorBorrowerId String?
+  loan                Loan         @relation(fields: [loanId], references: [id])
+  borrower            Borrower     @relation(fields: [borrowerId], references: [id])
+  guarantor           Borrower?    @relation("ArrearGuarantor", fields: [guarantorBorrowerId], references: [id])
+  createdAt           DateTime     @default(now())
+  updatedAt           DateTime     @updatedAt
+
+  @@index([loanId])
+  @@index([borrowerId])
+  @@index([guarantorBorrowerId])
+  @@map("arrears")
+}
+
+model LedgerAccount {
+  id           String        @id @default(cuid())
+  code         String        @unique @db.VarChar(10)
+  name         String        @db.VarChar(150)
+  type         AccountType
+  isActive     Boolean       @default(true)
+  isSampleData Boolean       @default(false)
+  journalLines JournalLine[]
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  @@map("ledger_accounts")
+}
+
+model JournalEntry {
+  id              String        @id @default(cuid())
+  journalNumber   String        @unique @db.VarChar(40)
+  description     String        @db.VarChar(300)
+  sourceEventType String        @db.VarChar(80)
+  sourceReference String        @unique @db.VarChar(80)
+  entryDate       DateTime
+  status          JournalStatus @default(POSTED)
+  isSampleData    Boolean       @default(false)
+  branchId        String
+  branch          Branch        @relation(fields: [branchId], references: [id])
+  lines           JournalLine[]
+  createdAt       DateTime      @default(now())
+
+  @@index([branchId])
+  @@map("journal_entries")
+}
+
+model JournalLine {
+  id            String        @id @default(cuid())
+  debitPesewas  Int           @default(0)
+  creditPesewas Int           @default(0)
+  isSampleData  Boolean       @default(false)
+  journalId     String
+  accountId     String
+  journal       JournalEntry  @relation(fields: [journalId], references: [id], onDelete: Cascade)
+  account       LedgerAccount @relation(fields: [accountId], references: [id])
+  createdAt     DateTime      @default(now())
+
+  @@index([journalId])
+  @@index([accountId])
+  @@map("journal_lines")
 }

@@ -38,3 +38,38 @@ body {
   color: var(--foreground);
   font-family: var(--font-geist-sans), Arial, sans-serif;
 }
+
+@media print {
+  @page {
+    size: A4;
+    margin: 12mm;
+  }
+
+  body {
+    background: white;
+    color: #111827;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+
+  .print-controls {
+    display: none !important;
+  }
+
+  .print-document {
+    width: 100% !important;
+    max-width: none !important;
+    border: 0 !important;
+    box-shadow: none !important;
+  }
+
+  .print-document table,
+  .print-document section,
+  .print-document dl {
+    break-inside: avoid;
+  }
+
+  .print-watermark {
+    position: fixed;
+  }
+}
