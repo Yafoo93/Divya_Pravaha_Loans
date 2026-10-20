@@ -70,34 +70,117 @@ enum JournalStatus {
   REVERSED
 }
 
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+}
+
 model Branch {
-  id           String          @id @default(cuid())
-  code         String          @unique @db.VarChar(20)
-  name         String          @db.VarChar(120)
-  isActive     Boolean         @default(true)
-  isSampleData Boolean         @default(false)
-  borrowers    Borrower[]
-  groups       BorrowerGroup[]
-  loans        Loan[]
-  receipts     Receipt[]
-  journals     JournalEntry[]
-  createdAt    DateTime        @default(now())
-  updatedAt    DateTime        @updatedAt
+  id               String                  @id @default(cuid())
+  code             String                  @unique @db.VarChar(20)
+  name             String                  @db.VarChar(120)
+  isActive         Boolean                 @default(true)
+  isSampleData     Boolean                 @default(false)
+  staffAssignments StaffBranchAssignment[]
+  borrowers        Borrower[]
+  groups           BorrowerGroup[]
+  loans            Loan[]
+  receipts         Receipt[]
+  journals         JournalEntry[]
+  createdAt        DateTime                @default(now())
+  updatedAt        DateTime                @updatedAt
 
   @@map("branches")
 }
 
 model Role {
-  id           String   @id @default(cuid())
-  code         String   @unique @db.VarChar(50)
-  name         String   @db.VarChar(100)
-  description  String   @db.VarChar(300)
-  isActive     Boolean  @default(true)
-  isSampleData Boolean  @default(false)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id           String     @id @default(cuid())
+  code         String     @unique @db.VarChar(50)
+  name         String     @db.VarChar(100)
+  description  String     @db.VarChar(300)
+  permissions  String[]   @default([])
+  restrictions String[]   @default([])
+  featureGate  String?    @db.VarChar(100)
+  isActive     Boolean    @default(true)
+  isSampleData Boolean    @default(false)
+  userRoles    UserRole[]
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
 
   @@map("roles")
+}
+
+model User {
+  id                String                  @id @default(cuid())
+  staffNumber       String                  @unique @db.VarChar(30)
+  name              String                  @db.VarChar(150)
+  email             String                  @unique @db.VarChar(254)
+  passwordHash      String?                 @db.VarChar(255)
+  status            UserStatus              @default(INACTIVE)
+  lastActiveAt      DateTime?
+  isSampleData      Boolean                 @default(false)
+  roles             UserRole[]
+  branchAssignments StaffBranchAssignment[]
+  sessions          Session[]
+  createdAt         DateTime                @default(now())
+  updatedAt         DateTime                @updatedAt
+
+  @@index([status])
+  @@map("users")
+}
+
+model Session {
+  id         String    @id @default(cuid())
+  tokenHash  String    @unique @db.Char(64)
+  userId     String
+  expiresAt  DateTime
+  lastSeenAt DateTime  @default(now())
+  revokedAt  DateTime?
+  userAgent  String?   @db.VarChar(500)
+  ipAddress  String?   @db.VarChar(64)
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt  DateTime  @default(now())
+
+  @@index([userId, expiresAt])
+  @@index([expiresAt, revokedAt])
+  @@map("sessions")
+}
+
+model UserRole {
+  id            String    @id @default(cuid())
+  assignmentKey String    @unique @db.VarChar(100)
+  userId        String
+  roleId        String
+  effectiveFrom DateTime
+  effectiveTo   DateTime?
+  isSampleData  Boolean   @default(false)
+  user          User      @relation(fields: [userId], references: [id])
+  role          Role      @relation(fields: [roleId], references: [id])
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([userId, effectiveTo])
+  @@index([roleId, effectiveTo])
+  @@map("user_roles")
+}
+
+model StaffBranchAssignment {
+  id            String    @id @default(cuid())
+  assignmentKey String    @unique @db.VarChar(100)
+  userId        String
+  branchId      String
+  effectiveFrom DateTime
+  effectiveTo   DateTime?
+  isSampleData  Boolean   @default(false)
+  user          User      @relation(fields: [userId], references: [id])
+  branch        Branch    @relation(fields: [branchId], references: [id])
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([userId, effectiveTo])
+  @@index([branchId, effectiveTo])
+  @@map("staff_branch_assignments")
 }
 
 model Borrower {
@@ -286,4 +369,23 @@ model JournalLine {
   @@index([journalId])
   @@index([accountId])
   @@map("journal_lines")
+}
+
+model AuditEvent {
+  id          String   @id @default(cuid())
+  actorUserId String?
+  eventType   String   @db.VarChar(80)
+  outcome     String   @db.VarChar(16)
+  permission  String?  @db.VarChar(500)
+  resource    String?  @db.VarChar(180)
+  reason      String?  @db.VarChar(120)
+  branchId    String?
+  ipAddress   String?  @db.VarChar(64)
+  userAgent   String?  @db.VarChar(500)
+  createdAt   DateTime @default(now())
+
+  @@index([actorUserId, createdAt])
+  @@index([eventType, createdAt])
+  @@index([resource, createdAt])
+  @@map("audit_events")
 }

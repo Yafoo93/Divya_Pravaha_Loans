@@ -1,53 +1,12 @@
 import "dotenv/config";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "../src/generated/prisma/client";
+import { hashPassword } from "../src/server/auth/password";
+import { roleDefinitions } from "../src/lib/role-definitions";
 
 const connectionString = process.env.DATABASE_URL;
 if (!connectionString) throw new Error("DATABASE_URL is not configured");
 const db = new PrismaClient({ adapter: new PrismaPg({ connectionString }) });
-
-const roles = [
-  [
-    "SYSTEM_ADMIN",
-    "System Administrator",
-    "Manages users, roles, and security configuration.",
-  ],
-  [
-    "MANAGER",
-    "Manager",
-    "Approves loans, disbursements, exceptions, and disputes.",
-  ],
-  [
-    "LOAN_OFFICER",
-    "Loan Officer",
-    "Manages borrowers, groups, verification, and applications.",
-  ],
-  [
-    "FIELD_COLLECTOR",
-    "Field Collector",
-    "Records cash receipts and submits cash handovers.",
-  ],
-  [
-    "CASHIER_ACCOUNTANT",
-    "Cashier / Accountant",
-    "Reconciles cash and maintains the ledger.",
-  ],
-  [
-    "INVESTOR_PORTFOLIO_OFFICER",
-    "Investor Portfolio Officer",
-    "Prepares gated investor records.",
-  ],
-  [
-    "AUDITOR",
-    "Auditor",
-    "Reads financial history, audits, and exception reports.",
-  ],
-  [
-    "INVESTOR_PORTAL_USER",
-    "Investor Portal User",
-    "Reads own gated investor records.",
-  ],
-] as const;
 
 const people = [
   ["CUS-0104", "Abena Boateng", "104", "Retail provisions"],
@@ -58,7 +17,92 @@ const people = [
   ["CUS-0208", "Daniel Tetteh", "208", "Mobile accessories"],
 ] as const;
 
+const staff = [
+  [
+    "STF-0001",
+    "Abdul Latif Kassim",
+    "abdul.kassim@divyapravaha.example",
+    "MANAGER",
+    "ACTIVE",
+    "2026-10-18T14:42:00Z",
+    true,
+  ],
+  [
+    "STF-0002",
+    "Tuahira Mahmud",
+    "tuahira.mahmud@divyapravaha.example",
+    "MANAGER",
+    "ACTIVE",
+    "2026-10-18T13:18:00Z",
+    true,
+  ],
+  [
+    "STF-0003",
+    "Kwesi Aidoo",
+    "kwesi.aidoo@divyapravaha.example",
+    "SYSTEM_ADMIN",
+    "ACTIVE",
+    "2026-10-18T09:05:00Z",
+    true,
+  ],
+  [
+    "STF-0004",
+    "Ama Mensah",
+    "ama.mensah@divyapravaha.example",
+    "LOAN_OFFICER",
+    "ACTIVE",
+    "2026-10-18T14:10:00Z",
+    true,
+  ],
+  [
+    "STF-0005",
+    "Kofi Asante",
+    "kofi.asante@divyapravaha.example",
+    "FIELD_COLLECTOR",
+    "ACTIVE",
+    "2026-10-18T14:40:00Z",
+    true,
+  ],
+  [
+    "STF-0006",
+    "Esi Quartey",
+    "esi.quartey@divyapravaha.example",
+    "CASHIER_ACCOUNTANT",
+    "ACTIVE",
+    "2026-10-18T14:30:00Z",
+    true,
+  ],
+  [
+    "STF-0007",
+    "Adjoa Nyarko",
+    "adjoa.nyarko@divyapravaha.example",
+    "AUDITOR",
+    "INACTIVE",
+    "2026-10-12T16:20:00Z",
+    false,
+  ],
+  [
+    "STF-0008",
+    "Nii Laryea",
+    "nii.laryea@divyapravaha.example",
+    "INVESTOR_PORTFOLIO_OFFICER",
+    "SUSPENDED",
+    "2026-09-30T11:15:00Z",
+    true,
+  ],
+  [
+    "USR-0009",
+    "Kobina Mensimah",
+    "kobina.mensimah@investor.divyapravaha.example",
+    "INVESTOR_PORTAL_USER",
+    "SUSPENDED",
+    "2026-09-29T10:00:00Z",
+    false,
+  ],
+] as const;
+
 async function main() {
+  const samplePasswordHash = await hashPassword("DemoLoan!2026");
   await db.$transaction(async (tx) => {
     const branch = await tx.branch.upsert({
       where: { code: "KASOA-MARKET" },
@@ -71,12 +115,101 @@ async function main() {
       },
     });
 
-    for (const [code, name, description] of roles) {
+    for (const role of roleDefinitions) {
       await tx.role.upsert({
-        where: { code },
-        update: { name, description, isActive: true, isSampleData: true },
-        create: { code, name, description, isActive: true, isSampleData: true },
+        where: { code: role.code },
+        update: {
+          name: role.name,
+          description: role.description,
+          permissions: [...role.permissions],
+          restrictions: [...role.restrictions],
+          featureGate: role.featureGate,
+          isActive: true,
+          isSampleData: true,
+        },
+        create: {
+          code: role.code,
+          name: role.name,
+          description: role.description,
+          permissions: [...role.permissions],
+          restrictions: [...role.restrictions],
+          featureGate: role.featureGate,
+          isActive: true,
+          isSampleData: true,
+        },
       });
+    }
+
+    const roleRecords = await tx.role.findMany();
+    const roleIds = new Map(roleRecords.map((role) => [role.code, role.id]));
+    const accessEffectiveFrom = new Date("2026-10-01T00:00:00Z");
+    for (const [
+      staffNumber,
+      name,
+      email,
+      roleCode,
+      status,
+      lastActiveAt,
+      assignToBranch,
+    ] of staff) {
+      const user = await tx.user.upsert({
+        where: { staffNumber },
+        update: {
+          name,
+          email,
+          passwordHash: samplePasswordHash,
+          status,
+          lastActiveAt: new Date(lastActiveAt),
+          isSampleData: true,
+        },
+        create: {
+          staffNumber,
+          name,
+          email,
+          passwordHash: samplePasswordHash,
+          status,
+          lastActiveAt: new Date(lastActiveAt),
+          isSampleData: true,
+        },
+      });
+      const roleId = roleIds.get(roleCode);
+      if (!roleId) throw new Error(`Seed role not found: ${roleCode}`);
+      await tx.userRole.upsert({
+        where: { assignmentKey: `${staffNumber}:${roleCode}` },
+        update: {
+          userId: user.id,
+          roleId,
+          effectiveFrom: accessEffectiveFrom,
+          effectiveTo: null,
+          isSampleData: true,
+        },
+        create: {
+          assignmentKey: `${staffNumber}:${roleCode}`,
+          userId: user.id,
+          roleId,
+          effectiveFrom: accessEffectiveFrom,
+          isSampleData: true,
+        },
+      });
+      if (assignToBranch) {
+        await tx.staffBranchAssignment.upsert({
+          where: { assignmentKey: `${staffNumber}:${branch.code}` },
+          update: {
+            userId: user.id,
+            branchId: branch.id,
+            effectiveFrom: accessEffectiveFrom,
+            effectiveTo: null,
+            isSampleData: true,
+          },
+          create: {
+            assignmentKey: `${staffNumber}:${branch.code}`,
+            userId: user.id,
+            branchId: branch.id,
+            effectiveFrom: accessEffectiveFrom,
+            isSampleData: true,
+          },
+        });
+      }
     }
 
     const borrowers = new Map<string, { id: string }>();
@@ -369,9 +502,12 @@ async function main() {
     db.receipt.count({ where: { isSampleData: true } }),
     db.arrear.count({ where: { isSampleData: true } }),
     db.journalEntry.count({ where: { isSampleData: true } }),
+    db.user.count({ where: { isSampleData: true } }),
+    db.userRole.count({ where: { isSampleData: true } }),
+    db.staffBranchAssignment.count({ where: { isSampleData: true } }),
   ]);
   console.log(
-    `Seed complete: ${counts[0]} branch, ${counts[1]} roles, ${counts[2]} borrowers, ${counts[3]} group, ${counts[4]} loans, ${counts[5]} receipt, ${counts[6]} arrear, ${counts[7]} journals.`,
+    `Seed complete: ${counts[0]} branch, ${counts[1]} roles, ${counts[2]} borrowers, ${counts[3]} group, ${counts[4]} loans, ${counts[5]} receipt, ${counts[6]} arrear, ${counts[7]} journals, ${counts[8]} users, ${counts[9]} user-role assignments, ${counts[10]} staff-branch assignments.`,
   );
 }
 

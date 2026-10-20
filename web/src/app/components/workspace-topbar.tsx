@@ -1,13 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
 import { breadcrumbsForPath, type StaffRole } from "@/lib/workspace-navigation";
 import type { PrototypeStaffAccount } from "@/lib/workspace-context";
 
 type WorkspaceTopbarProps = {
-  users: readonly PrototypeStaffAccount[];
+  user: PrototypeStaffAccount;
   unreadNotifications: number;
 };
 
@@ -20,14 +19,18 @@ function displayRole(role: StaffRole) {
 }
 
 export function WorkspaceTopbar({
-  users,
+  user,
   unreadNotifications,
 }: WorkspaceTopbarProps) {
   const pathname = usePathname();
+  const router = useRouter();
   const breadcrumbs = breadcrumbsForPath(pathname);
-  const [activeUserId, setActiveUserId] = useState(users[0].id);
-  const user =
-    users.find((candidate) => candidate.id === activeUserId) ?? users[0];
+
+  async function logout() {
+    await fetch("/api/auth/logout", { method: "POST" });
+    router.replace("/login");
+    router.refresh();
+  }
 
   return (
     <header className="border-border bg-surface flex min-h-20 items-center justify-between gap-4 border-b px-4 sm:px-6 lg:px-8">
@@ -111,28 +114,21 @@ export function WorkspaceTopbar({
           </summary>
           <div className="border-border bg-surface absolute top-12 right-0 z-20 w-64 rounded-xl border p-2 shadow-lg">
             <p className="text-muted px-3 py-2 text-[10px] font-bold tracking-wider uppercase">
-              Prototype manager accounts
+              Authenticated staff account
             </p>
-            {users.map((candidate) => (
-              <button
-                key={candidate.id}
-                type="button"
-                onClick={() => setActiveUserId(candidate.id)}
-                className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left transition ${candidate.id === user.id ? "bg-primary/10 text-primary" : "hover:bg-background"}`}
-              >
-                <span className="flex size-8 items-center justify-center rounded-full bg-current/10 text-xs font-extrabold">
-                  {candidate.initials}
-                </span>
-                <span>
-                  <span className="block text-sm font-semibold">
-                    {candidate.name}
-                  </span>
-                  <span className="text-muted block text-xs">
-                    {displayRole(candidate.role)}
-                  </span>
-                </span>
-              </button>
-            ))}
+            <div className="px-3 py-2">
+              <p className="text-sm font-semibold">{user.email}</p>
+              <p className="text-muted mt-1 text-xs">
+                Session expires after 12 hours.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={logout}
+              className="text-danger hover:bg-danger/10 mt-1 min-h-10 w-full rounded-lg px-3 text-left text-sm font-bold"
+            >
+              Sign out
+            </button>
           </div>
         </details>
       </div>

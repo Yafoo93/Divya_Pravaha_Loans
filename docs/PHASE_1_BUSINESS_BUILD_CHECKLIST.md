@@ -47,16 +47,16 @@ Phase 1 is a **solid functional prototype**, not disconnected mockups. Productio
 
 - [X] Initialize Git and add project setup documentation.
 - [X] Create a Next.js App Router project with TypeScript.
-- [ ] Configure Tailwind CSS with the royal-blue and white theme.
+- [X] Configure Tailwind CSS with the royal-blue and white theme.
 - [X] Configure PostgreSQL and Prisma.
-- [ ] Add local environment and secret templates.
-- [ ] Add commands for development, migration, seed, lint, test, and build.
-- [ ] Add formatting, linting, type-checking, and test automation.
-- [ ] Structure the application as a modular monolith.
-- [ ] Create server-only modules for identity, groups, loans, collections, guarantees, capital, accounting, documents, and reporting.
-- [ ] Create a repeatable fictional sample-data seed.
-- [ ] Seed a branch, every role, borrowers, groups, loans, receipts, arrears, and journals.
-- [ ] Mark every seeded record and page clearly as sample data.
+- [X] Add local environment and secret templates.
+- [X] Add commands for development, migration, seed, lint, test, and build.
+- [X] Add formatting, linting, type-checking, and test automation.
+- [X] Structure the application as a modular monolith.
+- [X] Create server-only modules for identity, groups, loans, collections, guarantees, capital, accounting, documents, and reporting.
+- [X] Create a repeatable fictional sample-data seed.
+- [X] Seed a branch, every role, borrowers, groups, loans, receipts, arrears, and journals.
+- [X] Mark every seeded record and page clearly as sample data.
 
 ### Result
 
@@ -68,18 +68,18 @@ A developer can start the database and application, seed the demonstration works
 
 ### Shared components
 
-- [ ] Desktop sidebar with branch context and permission-aware navigation.
-- [ ] Top bar with breadcrumb, notifications, user, and role.
-- [ ] Page headings with branch, date, and GHS context.
-- [ ] Cards, badges, tabs, tables, pagination, search, and filters.
-- [ ] Buttons, menus, dialogs, confirmations, and alerts.
-- [ ] Form controls with labels, help, validation, and disabled states.
-- [ ] Loading, empty, error, denied, and not-found states.
-- [ ] Printable receipt, voucher, statement, and report layouts.
-- [ ] Collector mobile header, connection status, and bottom navigation.
-- [ ] One-column mobile cash forms with large touch targets.
-- [ ] Ghana cedi formatting and Africa/Accra display dates.
-- [ ] Keyboard focus, readable contrast, and responsive layouts.
+- [X] Desktop sidebar with branch context and permission-aware navigation.
+- [X] Top bar with breadcrumb, notifications, user, and role.
+- [X] Page headings with branch, date, and GHS context.
+- [X] Cards, badges, tabs, tables, pagination, search, and filters.
+- [X] Buttons, menus, dialogs, confirmations, and alerts.
+- [X] Form controls with labels, help, validation, and disabled states.
+- [X] Loading, empty, error, denied, and not-found states.
+- [X] Printable receipt, voucher, statement, and report layouts.
+- [X] Collector mobile header, connection status, and bottom navigation.
+- [X] One-column mobile cash forms with large touch targets.
+- [X] Ghana cedi formatting and Africa/Accra display dates.
+- [X] Keyboard focus, readable contrast, and responsive layouts.
 
 ### Result
 
@@ -91,23 +91,23 @@ All later modules use one polished interface based on the supplied screenshots w
 
 ### Pages
 
-- [ ] `/login` — staff email and password.
+- [X] `/login` — staff email and password.
 - [ ] `/mfa` — six-digit prototype verification.
-- [ ] `/workspace/administration/staff` — staff and activation state.
-- [ ] `/workspace/administration/roles` — roles and permissions.
-- [ ] `/workspace/administration/branches` — branches and assignments.
+- [X] `/workspace/administration/staff` — staff and activation state.
+- [X] `/workspace/administration/roles` — roles and permissions.
+- [X] `/workspace/administration/branches` — branches and assignments.
 
 ### Backend work
 
-- [ ] Create User, Role, UserRole, Branch, and StaffBranchAssignment records.
-- [ ] Use secure password hashing and server sessions.
-- [ ] Implement every role in the requirements.
+- [X] Create User, Role, UserRole, Branch, and StaffBranchAssignment records.
+- [X] Use secure password hashing and server sessions.
+- [X] Implement every role in the requirements.
 - [ ] Require prototype MFA for privileged roles.
-- [ ] Enforce permissions server-side.
-- [ ] Enforce branch scope on operational records.
-- [ ] Prevent automatic financial authority for System Administrators.
-- [ ] Require maker and checker to be different users.
-- [ ] Record authentication and permission events.
+- [X] Enforce permissions server-side.
+- [X] Enforce branch scope on operational records.
+- [X] Prevent automatic financial authority for System Administrators.
+- [X] Require maker and checker to be different users.
+- [X] Record authentication and permission events.
 
 ### Tests
 

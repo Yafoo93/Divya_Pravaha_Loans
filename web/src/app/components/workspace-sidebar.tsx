@@ -2,20 +2,39 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { CompanyLogo } from "./company-logo";
 import {
   isNavigationItemActive,
   navigationForRole,
   type StaffRole,
 } from "@/lib/workspace-navigation";
+import { canAccessWorkspacePath } from "@/lib/workspace-authorization";
 
 type WorkspaceSidebarProps = {
   branch: { code: string; name: string };
   role: StaffRole;
+  permissions: readonly string[];
+  featureGate: string | null;
+  restrictions: readonly string[];
 };
 
-export function WorkspaceSidebar({ branch, role }: WorkspaceSidebarProps) {
+export function WorkspaceSidebar({
+  branch,
+  role,
+  permissions,
+  featureGate,
+  restrictions,
+}: WorkspaceSidebarProps) {
   const pathname = usePathname();
-  const items = navigationForRole(role);
+  const items = navigationForRole(role).filter((item) => {
+    return canAccessWorkspacePath(
+      item.href,
+      role,
+      permissions,
+      featureGate,
+      restrictions,
+    );
+  });
 
   return (
     <aside
@@ -23,12 +42,11 @@ export function WorkspaceSidebar({ branch, role }: WorkspaceSidebarProps) {
       aria-label="Workspace navigation"
     >
       <div className="border-border flex h-20 items-center gap-3 border-b px-5">
-        <div
-          className="bg-success flex size-10 items-center justify-center rounded-full text-lg font-black text-white"
-          aria-hidden="true"
-        >
-          DP
-        </div>
+        <CompanyLogo
+          size={40}
+          className="rounded-full bg-white p-0.5"
+          decorative
+        />
         <div>
           <p className="text-sm font-extrabold tracking-wide">DIVYA PRAVAHA</p>
           <p className="text-muted text-[10px] tracking-wider uppercase">

@@ -2,6 +2,7 @@ import "dotenv/config";
 import assert from "node:assert/strict";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "../src/generated/prisma/client";
+import { roleDefinitions } from "../src/lib/role-definitions";
 
 const connectionString = process.env.DATABASE_URL;
 if (!connectionString) throw new Error("DATABASE_URL is not configured");
@@ -18,6 +19,9 @@ async function main() {
     arrears,
     journals,
     accounts,
+    users,
+    userRoles,
+    staffBranchAssignments,
   ] = await Promise.all([
     db.branch.count({ where: { code: "KASOA-MARKET", isSampleData: true } }),
     db.role.findMany(),
@@ -34,6 +38,15 @@ async function main() {
       include: { lines: true },
     }),
     db.ledgerAccount.findMany(),
+    db.user.findMany({
+      where: { isSampleData: true },
+      include: { roles: { include: { role: true } } },
+    }),
+    db.userRole.findMany({ where: { isSampleData: true } }),
+    db.staffBranchAssignment.findMany({
+      where: { isSampleData: true },
+      include: { user: true, branch: true },
+    }),
   ]);
 
   assert.equal(branches, 1, "Expected the Kasoa Market sample branch");
@@ -45,6 +58,53 @@ async function main() {
   assert.ok(
     roles.every((record) => record.isSampleData),
     "Every seeded role must be marked as sample data",
+  );
+  for (const definition of roleDefinitions) {
+    const stored = roles.find((role) => role.code === definition.code);
+    assert.ok(stored, `Missing required role ${definition.code}`);
+    assert.deepEqual(stored.permissions, [...definition.permissions]);
+    assert.deepEqual(stored.restrictions, [...definition.restrictions]);
+    assert.equal(stored.featureGate, definition.featureGate);
+  }
+  assert.equal(
+    users.length,
+    9,
+    "Expected one identity for every required role",
+  );
+  assert.ok(
+    users.every(
+      (user) =>
+        user.isSampleData &&
+        user.passwordHash?.startsWith("scrypt$131072$8$1$") &&
+        user.roles.length === 1 &&
+        user.roles[0].effectiveTo === null,
+    ),
+    "Every sample user must have a secure password hash and one current role",
+  );
+  assert.equal(userRoles.length, 9, "Expected one role assignment per user");
+  assert.deepEqual(
+    new Set(users.flatMap((user) => user.roles.map(({ role }) => role.code))),
+    new Set(roleDefinitions.map(({ code }) => code)),
+    "Expected every role to have a demonstration identity",
+  );
+  assert.ok(
+    userRoles.every((assignment) => assignment.effectiveTo === null),
+    "Every seeded user-role assignment must be current",
+  );
+  assert.equal(
+    staffBranchAssignments.length,
+    7,
+    "Expected seven direct Kasoa Market staff assignments",
+  );
+  assert.ok(
+    staffBranchAssignments.every(
+      (assignment) =>
+        assignment.isSampleData &&
+        assignment.effectiveTo === null &&
+        assignment.branch.code === "KASOA-MARKET" &&
+        assignment.user.staffNumber !== "STF-0007",
+    ),
+    "Every branch assignment must be current, sample data, and target Kasoa Market",
   );
   assert.ok(borrowers.length >= 6, "Expected at least six sample borrowers");
   assert.ok(
@@ -114,7 +174,7 @@ async function main() {
   }
 
   console.log(
-    "Seed verification passed: every seeded record is marked as sample data, required records exist, loan terms and receipt allocations are correct, and every journal balances.",
+    "Seed verification passed: identity and access assignments exist, every seeded record is marked as sample data, loan terms and receipt allocations are correct, and every journal balances.",
   );
 }
 

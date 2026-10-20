@@ -8,9 +8,9 @@
   --primary-hover: #2444c5;
   --border: #dfe5f0;
   --muted: #69748c;
-  --success: #168a57;
-  --warning: #b7791f;
-  --danger: #c73a4a;
+  --success: #0f7a4b;
+  --warning: #92540a;
+  --danger: #b42336;
 }
 
 @theme inline {
@@ -32,11 +32,32 @@
   box-sizing: border-box;
 }
 
+:focus-visible {
+  outline: 3px solid var(--primary);
+  outline-offset: 3px;
+}
+
+::selection {
+  background: var(--primary);
+  color: white;
+}
+
 body {
   margin: 0;
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-geist-sans), Arial, sans-serif;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }
 
 @media print {

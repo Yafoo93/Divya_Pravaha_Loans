@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { formatGhsFromPesewas } from "@/lib/formatters";
 import { paginate } from "@/lib/pagination";
 import {
   Badge,
@@ -18,42 +19,42 @@ const records = [
     id: "LN-0204",
     borrower: "Abena Boateng",
     group: "Kasoa Market Circle",
-    balance: "GHS 2,000.00",
+    balancePesewas: 200_000,
     status: "ACTIVE",
   },
   {
     id: "LN-0246",
     borrower: "Efua Osei",
     group: "Kasoa Market Circle",
-    balance: "GHS 3,300.00",
+    balancePesewas: 330_000,
     status: "ACTIVE",
   },
   {
     id: "LN-0211",
     borrower: "Kwame Ansah",
     group: "Nima Unity",
-    balance: "GHS 100.00",
+    balancePesewas: 10_000,
     status: "OVERDUE",
   },
   {
     id: "LN-0195",
     borrower: "Akua Mensima",
     group: "Madina Traders",
-    balance: "GHS 600.00",
+    balancePesewas: 60_000,
     status: "OVERDUE",
   },
   {
     id: "LN-0187",
     borrower: "Eric Ofori",
     group: "Adabraka Circle",
-    balance: "GHS 900.00",
+    balancePesewas: 90_000,
     status: "OVERDUE",
   },
   {
     id: "LN-0172",
     borrower: "Adwoa Sarpong",
     group: "Kasoa Market Circle",
-    balance: "GHS 0.00",
+    balancePesewas: 0,
     status: "CLOSED",
   },
 ] as const;
@@ -98,7 +99,9 @@ export function SamplePortfolioTable() {
       ),
       group: record.group,
       balance: (
-        <span className="font-semibold tabular-nums">{record.balance}</span>
+        <span className="font-semibold tabular-nums">
+          {formatGhsFromPesewas(record.balancePesewas)}
+        </span>
       ),
       status: (
         <Badge variant={statusBadge[record.status]}>{record.status}</Badge>

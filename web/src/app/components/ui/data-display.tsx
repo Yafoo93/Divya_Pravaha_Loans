@@ -105,7 +105,12 @@ export function DataTable({
   emptyContent?: ReactNode;
 }) {
   return (
-    <div className="overflow-x-auto">
+    <div
+      className="overflow-x-auto focus-visible:outline-offset-[-3px]"
+      role="region"
+      aria-label="Scrollable data table"
+      tabIndex={0}
+    >
       <table className="w-full min-w-2xl border-collapse text-left text-sm">
         <thead className="bg-background text-muted">
           <tr>
