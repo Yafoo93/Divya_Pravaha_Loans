@@ -224,6 +224,7 @@ async function main() {
           ghanaCardNumber: `GHA-100000${suffix}-1`,
           ghanaCardVerified: true,
           consentReference: `CONS-${suffix.padStart(4, "0")}`,
+          status: "ACTIVE",
           branchId: branch.id,
           isSampleData: true,
         },
@@ -236,12 +237,197 @@ async function main() {
           ghanaCardNumber: `GHA-100000${suffix}-1`,
           ghanaCardVerified: true,
           consentReference: `CONS-${suffix.padStart(4, "0")}`,
+          status: "ACTIVE",
           branchId: branch.id,
           isSampleData: true,
         },
       });
       borrowers.set(customerId, borrower);
+      await tx.verification.upsert({
+        where: { verificationNumber: `VER-${customerId}` },
+        update: {
+          type: "GHANA_CARD",
+          status: "VERIFIED",
+          evidenceReference: `KYC-${customerId}`,
+          verifiedAt: new Date("2026-10-01T09:00:00Z"),
+          borrowerId: borrower.id,
+          isSampleData: true,
+        },
+        create: {
+          verificationNumber: `VER-${customerId}`,
+          type: "GHANA_CARD",
+          status: "VERIFIED",
+          evidenceReference: `KYC-${customerId}`,
+          verifiedAt: new Date("2026-10-01T09:00:00Z"),
+          borrowerId: borrower.id,
+          isSampleData: true,
+        },
+      });
+      await tx.consentRecord.upsert({
+        where: { consentNumber: `CONS-${suffix.padStart(4, "0")}` },
+        update: {
+          consentType: "BORROWER_DATA_AND_CREDIT",
+          version: "v1",
+          status: "RECORDED",
+          borrowerId: borrower.id,
+          isSampleData: true,
+        },
+        create: {
+          consentNumber: `CONS-${suffix.padStart(4, "0")}`,
+          consentType: "BORROWER_DATA_AND_CREDIT",
+          version: "v1",
+          status: "RECORDED",
+          recordedAt: new Date("2026-10-01T09:00:00Z"),
+          borrowerId: borrower.id,
+          isSampleData: true,
+        },
+      });
+      await tx.businessAssessment.upsert({
+        where: { assessmentNumber: `BUS-${customerId}` },
+        update: {
+          summary: businessDetails,
+          status: "COMPLETED",
+          assessedAt: new Date("2026-10-01T09:00:00Z"),
+          borrowerId: borrower.id,
+          isSampleData: true,
+        },
+        create: {
+          assessmentNumber: `BUS-${customerId}`,
+          summary: businessDetails,
+          status: "COMPLETED",
+          assessedAt: new Date("2026-10-01T09:00:00Z"),
+          borrowerId: borrower.id,
+          isSampleData: true,
+        },
+      });
+      for (const [documentNumber, type, storageReference] of [
+        [
+          `DOC-KYC-${customerId}`,
+          "GHANA_CARD",
+          `private://borrowers/${borrower.id}/ghana-card`,
+        ],
+        [
+          `DOC-CONS-${customerId}`,
+          "BORROWER_CONSENT",
+          `private://borrowers/${borrower.id}/consent`,
+        ],
+      ] as const) {
+        const document = await tx.document.upsert({
+          where: { documentNumber },
+          update: {
+            type,
+            storageReference,
+            status: "VERIFIED",
+            borrowerId: borrower.id,
+            isSampleData: true,
+          },
+          create: {
+            documentNumber,
+            type,
+            storageReference,
+            status: "VERIFIED",
+            borrowerId: borrower.id,
+            isSampleData: true,
+          },
+        });
+        await tx.documentVersion.upsert({
+          where: {
+            documentId_version: { documentId: document.id, version: 1 },
+          },
+          update: { storageReference },
+          create: {
+            documentId: document.id,
+            version: 1,
+            storageReference,
+          },
+        });
+      }
     }
+
+    const loanOfficer = await tx.user.findUniqueOrThrow({
+      where: { staffNumber: "STF-0004" },
+    });
+    const manager = await tx.user.findUniqueOrThrow({
+      where: { staffNumber: "STF-0001" },
+    });
+    const accessedDocument = await tx.document.findUniqueOrThrow({
+      where: { documentNumber: "DOC-KYC-CUS-0132" },
+      include: { versions: { where: { version: 1 }, take: 1 } },
+    });
+    const existingDocumentAccess = await tx.documentAccessEvent.findFirst({
+      where: {
+        documentId: accessedDocument.id,
+        accessedByUserId: manager.id,
+        reason: "sample_authorized_review",
+      },
+    });
+    if (!existingDocumentAccess) {
+      await tx.documentAccessEvent.create({
+        data: {
+          action: "VIEW_METADATA",
+          outcome: "SUCCESS",
+          reason: "sample_authorized_review",
+          accessedAt: new Date("2026-10-16T14:12:00Z"),
+          documentId: accessedDocument.id,
+          versionId: accessedDocument.versions[0]?.id ?? null,
+          accessedByUserId: manager.id,
+        },
+      });
+    }
+    const sampleRestriction = await tx.borrowerRestriction.upsert({
+      where: { restrictionNumber: "RST-SAMPLE-0190" },
+      update: {
+        reason:
+          "Historical identity clarification was required before lending.",
+        status: "REACTIVATED",
+        restrictedAt: new Date("2026-09-20T10:00:00Z"),
+        borrowerId: borrowers.get("CUS-0190")!.id,
+        branchId: branch.id,
+        restrictedByUserId: loanOfficer.id,
+        isSampleData: true,
+      },
+      create: {
+        restrictionNumber: "RST-SAMPLE-0190",
+        reason:
+          "Historical identity clarification was required before lending.",
+        status: "REACTIVATED",
+        restrictedAt: new Date("2026-09-20T10:00:00Z"),
+        borrowerId: borrowers.get("CUS-0190")!.id,
+        branchId: branch.id,
+        restrictedByUserId: loanOfficer.id,
+        isSampleData: true,
+      },
+    });
+    await tx.reactivationDecision.upsert({
+      where: { decisionNumber: "REA-SAMPLE-0190" },
+      update: {
+        requestReason:
+          "Fresh identity evidence was supplied and independently checked.",
+        status: "APPROVED",
+        requestedAt: new Date("2026-09-25T09:00:00Z"),
+        decisionReason:
+          "Evidence is complete; normal eligibility checks may resume.",
+        decidedAt: new Date("2026-09-26T11:00:00Z"),
+        restrictionId: sampleRestriction.id,
+        requestedByUserId: loanOfficer.id,
+        decidedByUserId: manager.id,
+        isSampleData: true,
+      },
+      create: {
+        decisionNumber: "REA-SAMPLE-0190",
+        requestReason:
+          "Fresh identity evidence was supplied and independently checked.",
+        status: "APPROVED",
+        requestedAt: new Date("2026-09-25T09:00:00Z"),
+        decisionReason:
+          "Evidence is complete; normal eligibility checks may resume.",
+        decidedAt: new Date("2026-09-26T11:00:00Z"),
+        restrictionId: sampleRestriction.id,
+        requestedByUserId: loanOfficer.id,
+        decidedByUserId: manager.id,
+        isSampleData: true,
+      },
+    });
 
     const group = await tx.borrowerGroup.upsert({
       where: { groupNumber: "GRP-0018" },
@@ -251,6 +437,8 @@ async function main() {
         jointLiabilityReference: "JL-0018-v1",
         activatedAt: new Date("2026-04-15T09:00:00Z"),
         branchId: branch.id,
+        officerId: loanOfficer.id,
+        createdByUserId: loanOfficer.id,
         isSampleData: true,
       },
       create: {
@@ -260,28 +448,156 @@ async function main() {
         jointLiabilityReference: "JL-0018-v1",
         activatedAt: new Date("2026-04-15T09:00:00Z"),
         branchId: branch.id,
+        officerId: loanOfficer.id,
+        createdByUserId: loanOfficer.id,
         isSampleData: true,
       },
     });
     for (const [customerId] of people) {
-      await tx.groupMembership.upsert({
+      const seededMembership = await tx.groupMembership.findFirst({
         where: {
-          groupId_borrowerId: {
-            groupId: group.id,
-            borrowerId: borrowers.get(customerId)!.id,
-          },
-        },
-        update: { status: "ACTIVE", hasConsented: true, isSampleData: true },
-        create: {
           groupId: group.id,
           borrowerId: borrowers.get(customerId)!.id,
           status: "ACTIVE",
-          joinedAt: new Date("2026-04-15T09:00:00Z"),
-          hasConsented: true,
-          isSampleData: true,
+        },
+      });
+      if (seededMembership) {
+        await tx.groupMembership.update({
+          where: { id: seededMembership.id },
+          data: { hasConsented: true, isSampleData: true },
+        });
+      } else {
+        await tx.groupMembership.create({
+          data: {
+            groupId: group.id,
+            borrowerId: borrowers.get(customerId)!.id,
+            status: "ACTIVE",
+            joinedAt: new Date("2026-04-15T09:00:00Z"),
+            hasConsented: true,
+            isSampleData: true,
+          },
+        });
+      }
+      await tx.groupMembershipChange.upsert({
+        where: { eventNumber: `GME-SEED-${customerId}` },
+        update: {
+          action: "JOINED",
+          effectiveDate: new Date("2026-04-15T09:00:00Z"),
+          reason: "Initial sample membership",
+          borrowerId: borrowers.get(customerId)!.id,
+          recordedByUserId: loanOfficer.id,
+          groupId: group.id,
+        },
+        create: {
+          eventNumber: `GME-SEED-${customerId}`,
+          action: "JOINED",
+          effectiveDate: new Date("2026-04-15T09:00:00Z"),
+          reason: "Initial sample membership",
+          borrowerId: borrowers.get(customerId)!.id,
+          recordedByUserId: loanOfficer.id,
+          groupId: group.id,
         },
       });
     }
+    await tx.groupSnapshot.upsert({
+      where: { snapshotNumber: "GS-SEED-0018" },
+      update: { memberIds: people.map(([id]) => borrowers.get(id)!.id) },
+      create: {
+        snapshotNumber: "GS-SEED-0018",
+        reason: "ACTIVATION",
+        memberIds: people.map(([id]) => borrowers.get(id)!.id),
+        capturedAt: new Date("2026-04-15T09:00:00Z"),
+        groupId: group.id,
+        isSampleData: true,
+      },
+    });
+    await tx.groupDocument.upsert({
+      where: { documentNumber: "GDOC-JL-0018" },
+      update: {
+        reference: `private://groups/${group.id}/agreement/v1`,
+        groupId: group.id,
+      },
+      create: {
+        documentNumber: "GDOC-JL-0018",
+        type: "JOINT_LIABILITY_AGREEMENT",
+        reference: `private://groups/${group.id}/agreement/v1`,
+        version: 1,
+        status: "VERIFIED",
+        groupId: group.id,
+        isSampleData: true,
+      },
+    });
+    await tx.groupActivationReview.upsert({
+      where: { reviewNumber: "GAR-SEED-0018" },
+      update: {
+        groupId: group.id,
+        requestedByUserId: loanOfficer.id,
+        decidedByUserId: manager.id,
+      },
+      create: {
+        reviewNumber: "GAR-SEED-0018",
+        status: "APPROVED",
+        requestReason:
+          "Six verified and consenting members with signed agreement.",
+        requestedAt: new Date("2026-04-14T09:00:00Z"),
+        decisionReason:
+          "Independent review completed; activation requirements met.",
+        decidedAt: new Date("2026-04-15T09:00:00Z"),
+        groupId: group.id,
+        requestedByUserId: loanOfficer.id,
+        decidedByUserId: manager.id,
+        isSampleData: true,
+      },
+    });
+    await tx.groupAgreement.upsert({
+      where: { agreementNumber: "JL-0018-v1" },
+      update: {
+        status: "SIGNED",
+        signedAt: new Date("2026-04-15T09:00:00Z"),
+        groupId: group.id,
+      },
+      create: {
+        agreementNumber: "JL-0018-v1",
+        version: 1,
+        status: "SIGNED",
+        documentReference: `private://groups/${group.id}/agreement/v1`,
+        signedAt: new Date("2026-04-15T09:00:00Z"),
+        groupId: group.id,
+        isSampleData: true,
+      },
+    });
+    await tx.groupVisit.upsert({
+      where: { visitNumber: "GV-SEED-0018" },
+      update: { groupId: group.id, officerId: loanOfficer.id },
+      create: {
+        visitNumber: "GV-SEED-0018",
+        visitedAt: new Date("2026-04-14T10:00:00Z"),
+        purpose: "Group formation and business verification",
+        outcome:
+          "Six verified members consented and signed the joint-liability agreement.",
+        groupId: group.id,
+        officerId: loanOfficer.id,
+        isSampleData: true,
+      },
+    });
+    await tx.groupStatusEvent.upsert({
+      where: { eventNumber: "GSE-SEED-0018" },
+      update: {
+        toStatus: "ACTIVE",
+        groupId: group.id,
+        recordedByUserId: manager.id,
+      },
+      create: {
+        eventNumber: "GSE-SEED-0018",
+        fromStatus: "DRAFT",
+        toStatus: "ACTIVE",
+        effectiveAt: new Date("2026-04-15T09:00:00Z"),
+        reason: "Independent activation review approved.",
+        groupId: group.id,
+        recordedByUserId: manager.id,
+        isSampleData: true,
+      },
+    });
 
     const loan = await tx.loan.upsert({
       where: { loanNumber: "LN-0204" },
@@ -491,6 +807,82 @@ async function main() {
         })),
       });
     }
+
+    const auditActors = await tx.user.findMany({
+      where: {
+        staffNumber: {
+          in: ["STF-0001", "STF-0002", "STF-0003", "STF-0006"],
+        },
+      },
+      select: { id: true, staffNumber: true, name: true },
+    });
+    const auditActor = (staffNumber: string, role: string) => {
+      const user = auditActors.find(
+        (candidate) => candidate.staffNumber === staffNumber,
+      );
+      if (!user) throw new Error(`Seed audit actor not found: ${staffNumber}`);
+      return { actorUserId: user.id, actorName: user.name, actorRole: role };
+    };
+    await tx.auditEvent.createMany({
+      skipDuplicates: true,
+      data: [
+        {
+          id: "AUD-DEMO-APPROVAL-001",
+          eventType: "BUSINESS_APPROVAL",
+          outcome: "SUCCESS",
+          permission: "approve_or_reject_loans",
+          resource: `loan_application:${loan.loanNumber}`,
+          reason: "manager_approved",
+          branchId: branch.id,
+          createdAt: new Date("2026-10-16T14:20:00Z"),
+          ...auditActor("STF-0001", "MANAGER"),
+        },
+        {
+          id: "AUD-DEMO-REJECTION-001",
+          eventType: "BUSINESS_REJECTION",
+          outcome: "SUCCESS",
+          permission: "approve_or_reject_loans",
+          resource: "loan_application:APP-0269",
+          reason: "documented_credit_decision",
+          branchId: branch.id,
+          createdAt: new Date("2026-10-16T14:24:00Z"),
+          ...auditActor("STF-0002", "MANAGER"),
+        },
+        {
+          id: "AUD-DEMO-REVERSAL-001",
+          eventType: "FINANCIAL_REVERSAL",
+          outcome: "SUCCESS",
+          permission: "reverse_posted_receipts",
+          resource: `receipt:${receipt.receiptNumber}`,
+          reason: "authorized_linked_reversal",
+          branchId: branch.id,
+          createdAt: new Date("2026-10-16T14:26:00Z"),
+          ...auditActor("STF-0006", "CASHIER_ACCOUNTANT"),
+        },
+        {
+          id: "AUD-DEMO-DOCUMENT-001",
+          eventType: "PRIVATE_DOCUMENT_ACCESS",
+          outcome: "SUCCESS",
+          permission: "record_verification",
+          resource: "private_document:KYC-0132.pdf",
+          reason: "authorized_review",
+          branchId: branch.id,
+          createdAt: new Date("2026-10-16T14:28:00Z"),
+          ...auditActor("STF-0001", "MANAGER"),
+        },
+        {
+          id: "AUD-DEMO-SECURITY-001",
+          eventType: "SECURITY_CONFIGURATION_CHANGE",
+          outcome: "SUCCESS",
+          permission: "manage_users",
+          resource: "user:STF-0007",
+          reason: "account_deactivated",
+          branchId: branch.id,
+          createdAt: new Date("2026-10-16T14:30:00Z"),
+          ...auditActor("STF-0003", "SYSTEM_ADMIN"),
+        },
+      ],
+    });
   });
 
   const counts = await Promise.all([

@@ -109,7 +109,25 @@ export const workspaceNavigation: readonly WorkspaceNavigationItem[] = [
     label: "Administration",
     href: "/workspace/administration",
     shortLabel: "AD",
-    allowedRoles: ["SYSTEM_ADMIN", "MANAGER", "AUDITOR"],
+    allowedRoles: ["SYSTEM_ADMIN", "AUDITOR"],
+  },
+  {
+    label: "Staff accounts",
+    href: "/workspace/administration/staff",
+    shortLabel: "ST",
+    allowedRoles: ["SYSTEM_ADMIN"],
+  },
+  {
+    label: "Branches",
+    href: "/workspace/administration/branches",
+    shortLabel: "BH",
+    allowedRoles: ["SYSTEM_ADMIN"],
+  },
+  {
+    label: "Roles & permissions",
+    href: "/workspace/administration/roles",
+    shortLabel: "RP",
+    allowedRoles: ["SYSTEM_ADMIN"],
   },
 ] as const;
 
@@ -118,9 +136,15 @@ export function navigationForRole(role: StaffRole) {
 }
 
 export function isNavigationItemActive(pathname: string, href: string) {
-  return href === "/workspace"
-    ? pathname === href
-    : pathname === href || pathname.startsWith(`${href}/`);
+  if (pathname === href) return true;
+  if (href === "/workspace") return false;
+  const moreSpecificItemMatches = workspaceNavigation.some(
+    (item) =>
+      item.href !== href &&
+      item.href.startsWith(`${href}/`) &&
+      (pathname === item.href || pathname.startsWith(`${item.href}/`)),
+  );
+  return !moreSpecificItemMatches && pathname.startsWith(`${href}/`);
 }
 
 export type BreadcrumbItem = { label: string; href?: string };

@@ -1,0 +1,18 @@
+DROP INDEX "group_memberships_groupId_borrowerId_key";
+CREATE INDEX "group_memberships_groupId_borrowerId_status_idx" ON "group_memberships"("groupId", "borrowerId", "status");
+CREATE TABLE "group_agreements" ("id" TEXT NOT NULL, "agreementNumber" VARCHAR(80) NOT NULL, "version" INTEGER NOT NULL DEFAULT 1, "status" VARCHAR(30) NOT NULL, "documentReference" VARCHAR(255) NOT NULL, "signedAt" TIMESTAMP(3), "isSampleData" BOOLEAN NOT NULL DEFAULT false, "groupId" TEXT NOT NULL, "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP, CONSTRAINT "group_agreements_pkey" PRIMARY KEY ("id"));
+CREATE TABLE "group_visits" ("id" TEXT NOT NULL, "visitNumber" VARCHAR(50) NOT NULL, "visitedAt" TIMESTAMP(3) NOT NULL, "purpose" VARCHAR(300) NOT NULL, "outcome" VARCHAR(500) NOT NULL, "isSampleData" BOOLEAN NOT NULL DEFAULT false, "groupId" TEXT NOT NULL, "officerId" TEXT NOT NULL, "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP, CONSTRAINT "group_visits_pkey" PRIMARY KEY ("id"));
+CREATE TABLE "group_status_events" ("id" TEXT NOT NULL, "eventNumber" VARCHAR(50) NOT NULL, "fromStatus" VARCHAR(30), "toStatus" VARCHAR(30) NOT NULL, "effectiveAt" TIMESTAMP(3) NOT NULL, "reason" VARCHAR(500) NOT NULL, "isSampleData" BOOLEAN NOT NULL DEFAULT false, "groupId" TEXT NOT NULL, "recordedByUserId" TEXT NOT NULL, "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP, CONSTRAINT "group_status_events_pkey" PRIMARY KEY ("id"));
+CREATE UNIQUE INDEX "group_agreements_agreementNumber_key" ON "group_agreements"("agreementNumber");
+CREATE INDEX "group_agreements_groupId_version_idx" ON "group_agreements"("groupId", "version");
+CREATE UNIQUE INDEX "group_visits_visitNumber_key" ON "group_visits"("visitNumber");
+CREATE INDEX "group_visits_groupId_visitedAt_idx" ON "group_visits"("groupId", "visitedAt");
+CREATE UNIQUE INDEX "group_status_events_eventNumber_key" ON "group_status_events"("eventNumber");
+CREATE INDEX "group_status_events_groupId_effectiveAt_idx" ON "group_status_events"("groupId", "effectiveAt");
+ALTER TABLE "group_agreements" ADD CONSTRAINT "group_agreements_groupId_fkey" FOREIGN KEY ("groupId") REFERENCES "borrower_groups"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "group_visits" ADD CONSTRAINT "group_visits_groupId_fkey" FOREIGN KEY ("groupId") REFERENCES "borrower_groups"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "group_visits" ADD CONSTRAINT "group_visits_officerId_fkey" FOREIGN KEY ("officerId") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "group_status_events" ADD CONSTRAINT "group_status_events_groupId_fkey" FOREIGN KEY ("groupId") REFERENCES "borrower_groups"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "group_status_events" ADD CONSTRAINT "group_status_events_recordedByUserId_fkey" FOREIGN KEY ("recordedByUserId") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+INSERT INTO "group_agreements" ("id","agreementNumber","version","status","documentReference","signedAt","isSampleData","groupId") SELECT md5(random()::text||"id"),"jointLiabilityReference",1,'SIGNED','private://groups/'||"id"||'/agreement/v1',"activatedAt","isSampleData","id" FROM "borrower_groups";
+INSERT INTO "group_status_events" ("id","eventNumber","fromStatus","toStatus","effectiveAt","reason","isSampleData","groupId","recordedByUserId") SELECT md5(random()::text||"id"),'GSE-MIG-'||"groupNumber",NULL,"status"::text,COALESCE("activatedAt","createdAt"),'Migrated historical group status',"isSampleData","id","createdByUserId" FROM "borrower_groups" WHERE "createdByUserId" IS NOT NULL;

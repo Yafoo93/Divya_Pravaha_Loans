@@ -26,6 +26,17 @@ export const prototypeManagers: readonly PrototypeStaffAccount[] = [
   },
 ] as const;
 
+export const prototypeLoginAccounts: readonly PrototypeStaffAccount[] = [
+  ...prototypeManagers,
+  {
+    id: "system-admin-kwesi",
+    name: "Kwesi Aidoo",
+    initials: "KA",
+    email: "kwesi.aidoo@divyapravaha.example",
+    role: "SYSTEM_ADMIN",
+  },
+] as const;
+
 export const prototypeWorkspace = {
   branch: { code: "KASOA-MARKET", name: "Kasoa Market" },
   currency: "GHS",

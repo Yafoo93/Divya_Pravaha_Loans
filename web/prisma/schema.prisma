@@ -18,6 +18,12 @@ enum GroupStatus {
   SUSPENDED
 }
 
+enum GroupActivationReviewStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
 enum MembershipStatus {
   ACTIVE
   EXITED
@@ -56,6 +62,42 @@ enum ArrearStatus {
   RESOLVED
 }
 
+enum BorrowerRestrictionStatus {
+  ACTIVE
+  REACTIVATION_PENDING
+  REACTIVATED
+  REACTIVATION_REJECTED
+}
+
+enum VerificationStatus {
+  PENDING
+  VERIFIED
+  REJECTED
+}
+
+enum ConsentStatus {
+  RECORDED
+  WITHDRAWN
+}
+
+enum BusinessAssessmentStatus {
+  PENDING
+  COMPLETED
+  NEEDS_REVIEW
+}
+
+enum DocumentStatus {
+  PENDING
+  VERIFIED
+  REJECTED
+}
+
+enum ReactivationDecisionStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
 enum AccountType {
   ASSET
   CONTRA_ASSET
@@ -77,19 +119,20 @@ enum UserStatus {
 }
 
 model Branch {
-  id               String                  @id @default(cuid())
-  code             String                  @unique @db.VarChar(20)
-  name             String                  @db.VarChar(120)
-  isActive         Boolean                 @default(true)
-  isSampleData     Boolean                 @default(false)
-  staffAssignments StaffBranchAssignment[]
-  borrowers        Borrower[]
-  groups           BorrowerGroup[]
-  loans            Loan[]
-  receipts         Receipt[]
-  journals         JournalEntry[]
-  createdAt        DateTime                @default(now())
-  updatedAt        DateTime                @updatedAt
+  id                   String                  @id @default(cuid())
+  code                 String                  @unique @db.VarChar(20)
+  name                 String                  @db.VarChar(120)
+  isActive             Boolean                 @default(true)
+  isSampleData         Boolean                 @default(false)
+  staffAssignments     StaffBranchAssignment[]
+  borrowers            Borrower[]
+  groups               BorrowerGroup[]
+  loans                Loan[]
+  receipts             Receipt[]
+  journals             JournalEntry[]
+  borrowerRestrictions BorrowerRestriction[]
+  createdAt            DateTime                @default(now())
+  updatedAt            DateTime                @updatedAt
 
   @@map("branches")
 }
@@ -112,19 +155,35 @@ model Role {
 }
 
 model User {
-  id                String                  @id @default(cuid())
-  staffNumber       String                  @unique @db.VarChar(30)
-  name              String                  @db.VarChar(150)
-  email             String                  @unique @db.VarChar(254)
-  passwordHash      String?                 @db.VarChar(255)
-  status            UserStatus              @default(INACTIVE)
-  lastActiveAt      DateTime?
-  isSampleData      Boolean                 @default(false)
-  roles             UserRole[]
-  branchAssignments StaffBranchAssignment[]
-  sessions          Session[]
-  createdAt         DateTime                @default(now())
-  updatedAt         DateTime                @updatedAt
+  id                       String                  @id @default(cuid())
+  staffNumber              String                  @unique @db.VarChar(30)
+  name                     String                  @db.VarChar(150)
+  email                    String                  @unique @db.VarChar(254)
+  passwordHash             String?                 @db.VarChar(255)
+  status                   UserStatus              @default(INACTIVE)
+  lastActiveAt             DateTime?
+  isSampleData             Boolean                 @default(false)
+  roles                    UserRole[]
+  branchAssignments        StaffBranchAssignment[]
+  sessions                 Session[]
+  restrictionsCreated      BorrowerRestriction[]   @relation("RestrictionMaker")
+  verificationsRecorded    Verification[]          @relation("VerificationOfficer")
+  consentsRecorded         ConsentRecord[]         @relation("ConsentRecorder")
+  assessmentsRecorded      BusinessAssessment[]    @relation("BusinessAssessor")
+  documentsUploaded        Document[]              @relation("DocumentUploader")
+  documentVersionsUploaded DocumentVersion[]       @relation("DocumentVersionUploader")
+  documentAccessEvents     DocumentAccessEvent[]   @relation("DocumentAccessor")
+  reactivationRequests     ReactivationDecision[]  @relation("DecisionRequester")
+  reactivationDecisions    ReactivationDecision[]  @relation("DecisionChecker")
+  groupsManaged            BorrowerGroup[]         @relation("GroupOfficer")
+  groupsCreated            BorrowerGroup[]         @relation("GroupCreator")
+  groupReviewsRequested    GroupActivationReview[] @relation("GroupReviewRequester")
+  groupReviewsDecided      GroupActivationReview[] @relation("GroupReviewChecker")
+  membershipChanges        GroupMembershipChange[] @relation("MembershipChangeRecorder")
+  groupVisitsRecorded      GroupVisit[]            @relation("GroupVisitOfficer")
+  groupStatusEvents        GroupStatusEvent[]      @relation("GroupStatusRecorder")
+  createdAt                DateTime                @default(now())
+  updatedAt                DateTime                @updatedAt
 
   @@index([status])
   @@map("users")
@@ -184,48 +243,296 @@ model StaffBranchAssignment {
 }
 
 model Borrower {
-  id                      String            @id @default(cuid())
-  customerId              String            @unique @db.VarChar(30)
-  legalName               String            @db.VarChar(150)
-  phone                   String            @db.VarChar(30)
-  residentialAddress      String            @db.VarChar(250)
-  businessDetails         String            @db.VarChar(500)
-  ghanaCardNumber         String            @unique @db.VarChar(30)
-  ghanaCardVerified       Boolean           @default(false)
-  consentReference        String            @db.VarChar(80)
-  status                  BorrowerStatus    @default(ACTIVE)
-  isSampleData            Boolean           @default(false)
+  id                      String                @id @default(cuid())
+  customerId              String                @unique @db.VarChar(30)
+  legalName               String                @db.VarChar(150)
+  phone                   String                @db.VarChar(30)
+  residentialAddress      String                @db.VarChar(250)
+  businessDetails         String                @db.VarChar(500)
+  ghanaCardNumber         String                @unique @db.VarChar(30)
+  ghanaCardVerified       Boolean               @default(false)
+  consentReference        String                @db.VarChar(80)
+  status                  BorrowerStatus        @default(ACTIVE)
+  isSampleData            Boolean               @default(false)
   branchId                String
-  branch                  Branch            @relation(fields: [branchId], references: [id])
+  branch                  Branch                @relation(fields: [branchId], references: [id])
   memberships             GroupMembership[]
   loans                   Loan[]
   receipts                Receipt[]
   arrears                 Arrear[]
-  guaranteedContributions Arrear[]          @relation("ArrearGuarantor")
-  createdAt               DateTime          @default(now())
-  updatedAt               DateTime          @updatedAt
+  guaranteedContributions Arrear[]              @relation("ArrearGuarantor")
+  restrictions            BorrowerRestriction[]
+  verifications           Verification[]
+  consentRecords          ConsentRecord[]
+  businessAssessments     BusinessAssessment[]
+  documents               Document[]
+  createdAt               DateTime              @default(now())
+  updatedAt               DateTime              @updatedAt
 
   @@index([branchId])
   @@map("borrowers")
 }
 
+model Verification {
+  id                 String             @id @default(cuid())
+  verificationNumber String             @unique @db.VarChar(40)
+  type               String             @db.VarChar(50)
+  status             VerificationStatus @default(PENDING)
+  evidenceReference  String             @db.VarChar(120)
+  verifiedAt         DateTime?
+  notes              String?            @db.VarChar(500)
+  isSampleData       Boolean            @default(false)
+  borrowerId         String
+  verifiedByUserId   String?
+  borrower           Borrower           @relation(fields: [borrowerId], references: [id])
+  verifiedBy         User?              @relation("VerificationOfficer", fields: [verifiedByUserId], references: [id])
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+
+  @@index([borrowerId, createdAt])
+  @@index([status])
+  @@map("verifications")
+}
+
+model ConsentRecord {
+  id               String        @id @default(cuid())
+  consentNumber    String        @unique @db.VarChar(80)
+  consentType      String        @db.VarChar(50)
+  version          String        @db.VarChar(30)
+  status           ConsentStatus @default(RECORDED)
+  recordedAt       DateTime      @default(now())
+  isSampleData     Boolean       @default(false)
+  borrowerId       String
+  recordedByUserId String?
+  borrower         Borrower      @relation(fields: [borrowerId], references: [id])
+  recordedBy       User?         @relation("ConsentRecorder", fields: [recordedByUserId], references: [id])
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  @@index([borrowerId, recordedAt])
+  @@map("consent_records")
+}
+
+model BusinessAssessment {
+  id               String                   @id @default(cuid())
+  assessmentNumber String                   @unique @db.VarChar(40)
+  summary          String                   @db.VarChar(1000)
+  status           BusinessAssessmentStatus @default(PENDING)
+  assessedAt       DateTime?
+  isSampleData     Boolean                  @default(false)
+  borrowerId       String
+  assessedByUserId String?
+  borrower         Borrower                 @relation(fields: [borrowerId], references: [id])
+  assessedBy       User?                    @relation("BusinessAssessor", fields: [assessedByUserId], references: [id])
+  createdAt        DateTime                 @default(now())
+  updatedAt        DateTime                 @updatedAt
+
+  @@index([borrowerId, createdAt])
+  @@index([status])
+  @@map("business_assessments")
+}
+
+model Document {
+  id               String                @id @default(cuid())
+  documentNumber   String                @unique @db.VarChar(80)
+  type             String                @db.VarChar(50)
+  fileName         String?               @db.VarChar(255)
+  storageReference String                @db.VarChar(255)
+  status           DocumentStatus        @default(PENDING)
+  isPrivate        Boolean               @default(true)
+  uploadedAt       DateTime              @default(now())
+  isSampleData     Boolean               @default(false)
+  borrowerId       String
+  uploadedByUserId String?
+  borrower         Borrower              @relation(fields: [borrowerId], references: [id])
+  uploadedBy       User?                 @relation("DocumentUploader", fields: [uploadedByUserId], references: [id])
+  currentVersion   Int                   @default(1)
+  versions         DocumentVersion[]
+  accessEvents     DocumentAccessEvent[]
+  createdAt        DateTime              @default(now())
+  updatedAt        DateTime              @updatedAt
+
+  @@index([borrowerId, uploadedAt])
+  @@index([status])
+  @@map("documents")
+}
+
+model DocumentVersion {
+  id               String   @id @default(cuid())
+  version          Int
+  storageReference String   @db.VarChar(255)
+  fileName         String?  @db.VarChar(255)
+  checksum         String?  @db.VarChar(128)
+  uploadedAt       DateTime @default(now())
+  documentId       String
+  uploadedByUserId String?
+  document         Document @relation(fields: [documentId], references: [id])
+  uploadedBy       User?    @relation("DocumentVersionUploader", fields: [uploadedByUserId], references: [id])
+
+  @@unique([documentId, version])
+  @@index([uploadedAt])
+  @@map("document_versions")
+}
+
+model DocumentAccessEvent {
+  id               String   @id @default(cuid())
+  action           String   @db.VarChar(30)
+  outcome          String   @db.VarChar(16)
+  reason           String?  @db.VarChar(120)
+  accessedAt       DateTime @default(now())
+  documentId       String
+  versionId        String?
+  accessedByUserId String
+  document         Document @relation(fields: [documentId], references: [id])
+  accessedBy       User     @relation("DocumentAccessor", fields: [accessedByUserId], references: [id])
+
+  @@index([documentId, accessedAt])
+  @@index([accessedByUserId, accessedAt])
+  @@map("document_access_events")
+}
+
+model BorrowerRestriction {
+  id                 String                    @id @default(cuid())
+  restrictionNumber  String                    @unique @db.VarChar(40)
+  reason             String                    @db.VarChar(500)
+  status             BorrowerRestrictionStatus @default(ACTIVE)
+  restrictedAt       DateTime                  @default(now())
+  isSampleData       Boolean                   @default(false)
+  borrowerId         String
+  branchId           String
+  restrictedByUserId String
+  borrower           Borrower                  @relation(fields: [borrowerId], references: [id])
+  branch             Branch                    @relation(fields: [branchId], references: [id])
+  restrictedBy       User                      @relation("RestrictionMaker", fields: [restrictedByUserId], references: [id])
+  decisions          ReactivationDecision[]
+  createdAt          DateTime                  @default(now())
+  updatedAt          DateTime                  @updatedAt
+
+  @@index([borrowerId, createdAt])
+  @@index([branchId, status])
+  @@map("borrower_restrictions")
+}
+
+model ReactivationDecision {
+  id                String                     @id @default(cuid())
+  decisionNumber    String                     @unique @db.VarChar(50)
+  requestReason     String                     @db.VarChar(500)
+  status            ReactivationDecisionStatus @default(PENDING)
+  requestedAt       DateTime                   @default(now())
+  decisionReason    String?                    @db.VarChar(500)
+  decidedAt         DateTime?
+  isSampleData      Boolean                    @default(false)
+  restrictionId     String
+  requestedByUserId String
+  decidedByUserId   String?
+  restriction       BorrowerRestriction        @relation(fields: [restrictionId], references: [id])
+  requestedBy       User                       @relation("DecisionRequester", fields: [requestedByUserId], references: [id])
+  decidedBy         User?                      @relation("DecisionChecker", fields: [decidedByUserId], references: [id])
+  createdAt         DateTime                   @default(now())
+  updatedAt         DateTime                   @updatedAt
+
+  @@index([restrictionId, createdAt])
+  @@index([status, requestedAt])
+  @@map("reactivation_decisions")
+}
+
 model BorrowerGroup {
-  id                      String            @id @default(cuid())
-  groupNumber             String            @unique @db.VarChar(30)
-  name                    String            @db.VarChar(150)
-  status                  GroupStatus       @default(DRAFT)
-  jointLiabilityReference String            @db.VarChar(80)
+  id                      String                  @id @default(cuid())
+  groupNumber             String                  @unique @db.VarChar(30)
+  name                    String                  @db.VarChar(150)
+  status                  GroupStatus             @default(DRAFT)
+  jointLiabilityReference String                  @db.VarChar(80)
   activatedAt             DateTime?
-  isSampleData            Boolean           @default(false)
+  isSampleData            Boolean                 @default(false)
   branchId                String
-  branch                  Branch            @relation(fields: [branchId], references: [id])
+  officerId               String?
+  createdByUserId         String?
+  branch                  Branch                  @relation(fields: [branchId], references: [id])
+  officer                 User?                   @relation("GroupOfficer", fields: [officerId], references: [id])
+  createdBy               User?                   @relation("GroupCreator", fields: [createdByUserId], references: [id])
   memberships             GroupMembership[]
   loans                   Loan[]
-  createdAt               DateTime          @default(now())
-  updatedAt               DateTime          @updatedAt
+  snapshots               GroupSnapshot[]
+  documents               GroupDocument[]
+  activationReviews       GroupActivationReview[]
+  membershipChanges       GroupMembershipChange[]
+  agreements              GroupAgreement[]
+  visits                  GroupVisit[]
+  statusEvents            GroupStatusEvent[]
+  createdAt               DateTime                @default(now())
+  updatedAt               DateTime                @updatedAt
 
   @@index([branchId])
   @@map("borrower_groups")
+}
+
+model GroupSnapshot {
+  id             String        @id @default(cuid())
+  snapshotNumber String        @unique @db.VarChar(50)
+  reason         String        @db.VarChar(120)
+  memberIds      String[]
+  capturedAt     DateTime      @default(now())
+  isSampleData   Boolean       @default(false)
+  groupId        String
+  group          BorrowerGroup @relation(fields: [groupId], references: [id])
+
+  @@index([groupId, capturedAt])
+  @@map("group_snapshots")
+}
+
+model GroupDocument {
+  id             String        @id @default(cuid())
+  documentNumber String        @unique @db.VarChar(80)
+  type           String        @db.VarChar(50)
+  reference      String        @db.VarChar(255)
+  version        Int           @default(1)
+  status         String        @db.VarChar(30)
+  isPrivate      Boolean       @default(true)
+  isSampleData   Boolean       @default(false)
+  groupId        String
+  group          BorrowerGroup @relation(fields: [groupId], references: [id])
+  createdAt      DateTime      @default(now())
+
+  @@index([groupId, createdAt])
+  @@map("group_documents")
+}
+
+model GroupActivationReview {
+  id                String                      @id @default(cuid())
+  reviewNumber      String                      @unique @db.VarChar(50)
+  status            GroupActivationReviewStatus @default(PENDING)
+  requestReason     String                      @db.VarChar(500)
+  requestedAt       DateTime                    @default(now())
+  decisionReason    String?                     @db.VarChar(500)
+  decidedAt         DateTime?
+  isSampleData      Boolean                     @default(false)
+  groupId           String
+  requestedByUserId String
+  decidedByUserId   String?
+  group             BorrowerGroup               @relation(fields: [groupId], references: [id])
+  requestedBy       User                        @relation("GroupReviewRequester", fields: [requestedByUserId], references: [id])
+  decidedBy         User?                       @relation("GroupReviewChecker", fields: [decidedByUserId], references: [id])
+
+  @@index([groupId, requestedAt])
+  @@index([status])
+  @@map("group_activation_reviews")
+}
+
+model GroupMembershipChange {
+  id               String        @id @default(cuid())
+  eventNumber      String        @unique @db.VarChar(50)
+  action           String        @db.VarChar(30)
+  effectiveDate    DateTime
+  reason           String        @db.VarChar(500)
+  borrowerId       String
+  recordedByUserId String
+  groupId          String
+  group            BorrowerGroup @relation(fields: [groupId], references: [id])
+  recordedBy       User          @relation("MembershipChangeRecorder", fields: [recordedByUserId], references: [id])
+  createdAt        DateTime      @default(now())
+
+  @@index([groupId, effectiveDate])
+  @@map("group_membership_changes")
 }
 
 model GroupMembership {
@@ -242,9 +549,60 @@ model GroupMembership {
   createdAt    DateTime         @default(now())
   updatedAt    DateTime         @updatedAt
 
-  @@unique([groupId, borrowerId])
+  @@index([groupId, borrowerId, status])
   @@index([borrowerId])
   @@map("group_memberships")
+}
+
+model GroupAgreement {
+  id                String        @id @default(cuid())
+  agreementNumber   String        @unique @db.VarChar(80)
+  version           Int           @default(1)
+  status            String        @db.VarChar(30)
+  documentReference String        @db.VarChar(255)
+  signedAt          DateTime?
+  isSampleData      Boolean       @default(false)
+  groupId           String
+  group             BorrowerGroup @relation(fields: [groupId], references: [id])
+  createdAt         DateTime      @default(now())
+
+  @@index([groupId, version])
+  @@map("group_agreements")
+}
+
+model GroupVisit {
+  id           String        @id @default(cuid())
+  visitNumber  String        @unique @db.VarChar(50)
+  visitedAt    DateTime
+  purpose      String        @db.VarChar(300)
+  outcome      String        @db.VarChar(500)
+  isSampleData Boolean       @default(false)
+  groupId      String
+  officerId    String
+  group        BorrowerGroup @relation(fields: [groupId], references: [id])
+  officer      User          @relation("GroupVisitOfficer", fields: [officerId], references: [id])
+  createdAt    DateTime      @default(now())
+
+  @@index([groupId, visitedAt])
+  @@map("group_visits")
+}
+
+model GroupStatusEvent {
+  id               String        @id @default(cuid())
+  eventNumber      String        @unique @db.VarChar(50)
+  fromStatus       String?       @db.VarChar(30)
+  toStatus         String        @db.VarChar(30)
+  effectiveAt      DateTime
+  reason           String        @db.VarChar(500)
+  isSampleData     Boolean       @default(false)
+  groupId          String
+  recordedByUserId String
+  group            BorrowerGroup @relation(fields: [groupId], references: [id])
+  recordedBy       User          @relation("GroupStatusRecorder", fields: [recordedByUserId], references: [id])
+  createdAt        DateTime      @default(now())
+
+  @@index([groupId, effectiveAt])
+  @@map("group_status_events")
 }
 
 model Loan {
@@ -374,6 +732,8 @@ model JournalLine {
 model AuditEvent {
   id          String   @id @default(cuid())
   actorUserId String?
+  actorName   String?  @db.VarChar(150)
+  actorRole   String?  @db.VarChar(50)
   eventType   String   @db.VarChar(80)
   outcome     String   @db.VarChar(16)
   permission  String?  @db.VarChar(500)

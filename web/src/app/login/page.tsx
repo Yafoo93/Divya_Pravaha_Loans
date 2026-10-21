@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { LoginForm } from "../components/login-form";
 import { CompanyLogo } from "../components/company-logo";
-import { prototypeManagers } from "@/lib/workspace-context";
+import { prototypeLoginAccounts } from "@/lib/workspace-context";
 
 export const metadata: Metadata = { title: "Staff sign in · Divya Pravaha" };
 
@@ -53,7 +53,7 @@ export default function LoginPage() {
               Enter your email address and password.
             </p>
             <div className="mt-6">
-              <LoginForm accounts={prototypeManagers} />
+              <LoginForm accounts={prototypeLoginAccounts} />
             </div>
           </div>
           <p className="text-muted mt-5 text-xs">

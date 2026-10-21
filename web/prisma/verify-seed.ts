@@ -22,6 +22,13 @@ async function main() {
     users,
     userRoles,
     staffBranchAssignments,
+    verifications,
+    consentRecords,
+    businessAssessments,
+    documents,
+    documentAccessEvents,
+    restrictions,
+    reactivationDecisions,
   ] = await Promise.all([
     db.branch.count({ where: { code: "KASOA-MARKET", isSampleData: true } }),
     db.role.findMany(),
@@ -47,6 +54,16 @@ async function main() {
       where: { isSampleData: true },
       include: { user: true, branch: true },
     }),
+    db.verification.findMany({ where: { isSampleData: true } }),
+    db.consentRecord.findMany({ where: { isSampleData: true } }),
+    db.businessAssessment.findMany({ where: { isSampleData: true } }),
+    db.document.findMany({
+      where: { isSampleData: true },
+      include: { versions: true },
+    }),
+    db.documentAccessEvent.findMany(),
+    db.borrowerRestriction.findMany({ where: { isSampleData: true } }),
+    db.reactivationDecision.findMany({ where: { isSampleData: true } }),
   ]);
 
   assert.equal(branches, 1, "Expected the Kasoa Market sample branch");
@@ -111,6 +128,48 @@ async function main() {
     borrowers.every((record) => record.isSampleData),
     "Every seeded borrower must be marked as sample data",
   );
+  assert.equal(
+    verifications.length,
+    6,
+    "Expected one verification per borrower",
+  );
+  assert.equal(
+    consentRecords.length,
+    6,
+    "Expected one consent record per borrower",
+  );
+  assert.equal(
+    businessAssessments.length,
+    6,
+    "Expected one business assessment per borrower",
+  );
+  assert.equal(
+    documents.length,
+    12,
+    "Expected two private documents per borrower",
+  );
+  assert.ok(
+    documents.every(
+      (document) =>
+        document.isPrivate &&
+        document.storageReference.startsWith("private://") &&
+        document.versions.length >= 1,
+    ),
+    "Every sample document must be private and have a version record",
+  );
+  assert.ok(
+    documentAccessEvents.length >= 1,
+    "Expected at least one private-document access event",
+  );
+  assert.ok(restrictions.length >= 1, "Expected a sample restriction record");
+  assert.ok(
+    reactivationDecisions.some(
+      (decision) =>
+        decision.status === "APPROVED" &&
+        decision.requestedByUserId !== decision.decidedByUserId,
+    ),
+    "Expected an independently approved sample reactivation decision",
+  );
   assert.ok(
     groups.every(
       (record) =>
@@ -174,7 +233,7 @@ async function main() {
   }
 
   console.log(
-    "Seed verification passed: identity and access assignments exist, every seeded record is marked as sample data, loan terms and receipt allocations are correct, and every journal balances.",
+    "Seed verification passed: borrower domain, identity and access records exist, reactivation uses independent staff, loan terms and receipt allocations are correct, and every journal balances.",
   );
 }
 

@@ -6,9 +6,13 @@ import {
 } from "./workspace-navigation";
 
 describe("permission-aware workspace navigation", () => {
-  it("shows administration but no finance operations to a system administrator", () => {
+  it("shows account administration but no finance operations to a system administrator", () => {
     const labels = navigationForRole("SYSTEM_ADMIN").map((item) => item.label);
+    expect(labels).toContain("Staff accounts");
     expect(labels).toContain("Administration");
+    expect(labels).toContain("Branches");
+    expect(labels).toContain("Roles & permissions");
+    expect(labels).not.toContain("Borrowers");
     expect(labels).not.toContain("Accounting & reports");
     expect(labels).not.toContain("Disbursements");
   });
@@ -39,6 +43,18 @@ describe("permission-aware workspace navigation", () => {
     expect(isNavigationItemActive("/workspace/borrowers", "/workspace")).toBe(
       false,
     );
+    expect(
+      isNavigationItemActive(
+        "/workspace/administration/staff",
+        "/workspace/administration",
+      ),
+    ).toBe(false);
+    expect(
+      isNavigationItemActive(
+        "/workspace/administration/staff",
+        "/workspace/administration/staff",
+      ),
+    ).toBe(true);
   });
 
   it("builds readable breadcrumbs for sections and records", () => {

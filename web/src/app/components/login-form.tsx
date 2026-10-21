@@ -120,7 +120,7 @@ export function LoginForm({
 
       <div className="border-border mt-6 border-t pt-5">
         <p className="text-muted text-xs font-bold tracking-wider uppercase">
-          Prototype Manager identities
+          Prototype staff identities
         </p>
         <div className="mt-3 space-y-2">
           {accounts.map((account) => (

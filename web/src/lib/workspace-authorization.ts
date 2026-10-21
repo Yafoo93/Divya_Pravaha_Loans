@@ -58,7 +58,12 @@ export const workspacePagePermissions = {
     "read_financial_history",
   ],
   "/workspace/capital": ["manage_ledger", "read_financial_history"],
-  "/workspace/administration": ["manage_users", "manage_roles"],
+  "/workspace/administration": [
+    "manage_users",
+    "manage_roles",
+    "manage_security_configuration",
+    "read_audit_events",
+  ],
   "/workspace/administration/staff": ["manage_users"],
   "/workspace/administration/branches": ["manage_users"],
   "/workspace/administration/roles": ["manage_roles"],
@@ -111,7 +116,10 @@ export function canPerformPermission(
   role?: StaffRole,
 ) {
   if (featureGate || !permissions.includes(permission)) return false;
-  if (role === "SYSTEM_ADMIN" && !systemAdminAllowedPermissions.has(permission)) {
+  if (
+    role === "SYSTEM_ADMIN" &&
+    !systemAdminAllowedPermissions.has(permission)
+  ) {
     return false;
   }
   if (mutation && restrictions.includes("read_only")) return false;
