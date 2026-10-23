@@ -33,7 +33,8 @@ describe("prototype branch assignments", () => {
       prototypeStaff.filter((record) => record.role !== "INVESTOR_PORTAL_USER")
         .length,
     );
-    expect(available.some((record) => record.role === "INVESTOR_PORTAL_USER"))
-      .toBe(false);
+    expect(
+      available.some((record) => record.role === "INVESTOR_PORTAL_USER"),
+    ).toBe(false);
   });
 });

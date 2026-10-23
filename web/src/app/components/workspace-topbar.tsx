@@ -4,10 +4,15 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { breadcrumbsForPath, type StaffRole } from "@/lib/workspace-navigation";
 import type { PrototypeStaffAccount } from "@/lib/workspace-context";
+import { WorkspaceMobileNav } from "./workspace-mobile-nav";
 
 type WorkspaceTopbarProps = {
   user: PrototypeStaffAccount;
   unreadNotifications: number;
+  branch: { code: string; name: string };
+  permissions: readonly string[];
+  featureGate: string | null;
+  restrictions: readonly string[];
 };
 
 function displayRole(role: StaffRole) {
@@ -21,6 +26,10 @@ function displayRole(role: StaffRole) {
 export function WorkspaceTopbar({
   user,
   unreadNotifications,
+  branch,
+  permissions,
+  featureGate,
+  restrictions,
 }: WorkspaceTopbarProps) {
   const pathname = usePathname();
   const router = useRouter();
@@ -33,40 +42,49 @@ export function WorkspaceTopbar({
   }
 
   return (
-    <header className="border-border bg-surface flex min-h-20 items-center justify-between gap-4 border-b px-4 sm:px-6 lg:px-8">
-      <nav aria-label="Breadcrumb" className="min-w-0">
-        <ol className="flex min-w-0 items-center gap-2 text-sm">
-          {breadcrumbs.map((item, index) => (
-            <li
-              key={`${item.label}-${index}`}
-              className="flex min-w-0 items-center gap-2"
-            >
-              {index > 0 && (
-                <span className="text-muted" aria-hidden="true">
-                  /
-                </span>
-              )}
-              {item.href ? (
-                <Link
-                  href={item.href}
-                  className="text-muted hover:text-primary truncate transition"
-                >
-                  {item.label}
-                </Link>
-              ) : (
-                <span
-                  className="text-foreground truncate font-semibold"
-                  aria-current="page"
-                >
-                  {item.label}
-                </span>
-              )}
-            </li>
-          ))}
-        </ol>
-      </nav>
+    <header className="border-border bg-surface sticky top-0 z-40 flex min-h-16 items-center justify-between gap-2 border-b px-3 sm:min-h-20 sm:gap-4 sm:px-6 lg:px-8">
+      <div className="flex min-w-0 items-center gap-3">
+        <WorkspaceMobileNav
+          branch={branch}
+          role={user.role}
+          permissions={permissions}
+          featureGate={featureGate}
+          restrictions={restrictions}
+        />
+        <nav aria-label="Breadcrumb" className="min-w-0">
+          <ol className="flex min-w-0 items-center gap-2 text-sm">
+            {breadcrumbs.map((item, index) => (
+              <li
+                key={`${item.label}-${index}`}
+                className="flex min-w-0 items-center gap-2"
+              >
+                {index > 0 && (
+                  <span className="text-muted" aria-hidden="true">
+                    /
+                  </span>
+                )}
+                {item.href ? (
+                  <Link
+                    href={item.href}
+                    className="text-muted hover:text-primary truncate transition"
+                  >
+                    {item.label}
+                  </Link>
+                ) : (
+                  <span
+                    className="text-foreground truncate font-semibold"
+                    aria-current="page"
+                  >
+                    {item.label}
+                  </span>
+                )}
+              </li>
+            ))}
+          </ol>
+        </nav>
+      </div>
 
-      <div className="flex shrink-0 items-center gap-3 sm:gap-4">
+      <div className="flex shrink-0 items-center gap-2 sm:gap-4">
         <button
           type="button"
           aria-label={

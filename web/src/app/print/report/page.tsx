@@ -39,7 +39,7 @@ export default function PrintableReportPage() {
               ]}
               total={["Total", "248", "480,000.00"]}
             />
-            <section className="mt-8 grid grid-cols-2 gap-4">
+            <section className="mt-8 grid gap-4 sm:grid-cols-2">
               <div className="bg-background rounded-xl p-4">
                 <p className="text-muted text-xs uppercase">
                   Collector custody

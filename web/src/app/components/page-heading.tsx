@@ -25,12 +25,14 @@ export function PageHeading({
         <p className="text-primary text-xs font-bold tracking-wider uppercase">
           {branchName} / {formatAccraHeadingDate(date)} / {currency}
         </p>
-        <h1 className="mt-2 text-3xl font-bold">{title}</h1>
+        <h1 className="mt-2 text-2xl leading-tight font-bold sm:text-3xl">
+          {title}
+        </h1>
         {description && (
           <p className="text-muted mt-2 max-w-3xl">{description}</p>
         )}
       </div>
-      <div className="flex items-center gap-3">
+      <div className="flex w-full flex-wrap items-center gap-3 sm:w-auto sm:justify-end">
         <SampleDataBadge />
         {actions}
       </div>

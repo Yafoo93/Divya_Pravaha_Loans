@@ -13,7 +13,9 @@ export async function requireIndependentChecker(
   makerUserId: string,
 ) {
   if (!makerUserId) {
-    throw new MakerCheckerViolation("The pending record has no maker identity.");
+    throw new MakerCheckerViolation(
+      "The pending record has no maker identity.",
+    );
   }
 
   return requirePermission(makerCheckerActions[action], true, makerUserId);

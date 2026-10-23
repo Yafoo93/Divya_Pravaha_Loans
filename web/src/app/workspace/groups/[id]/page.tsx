@@ -7,6 +7,7 @@ import { canPerformPermission } from "@/lib/workspace-authorization";
 import { andBranchScope, requireBranchScope } from "@/server/auth/branch-scope";
 import { requireWorkspacePath } from "@/server/auth/session";
 import { GroupWorkflowActions } from "../../../components/group-workflow-actions";
+import { GroupEditForm } from "../../../components/group-edit-form";
 import { PageHeading } from "../../../components/page-heading";
 import { Badge, Card, DataTable } from "../../../components/ui/data-display";
 export default async function GroupPage({
@@ -65,6 +66,22 @@ export default async function GroupPage({
     where: { branchId: group.branchId, status: "ACTIVE" },
     orderBy: { legalName: "asc" },
     select: { id: true, legalName: true, customerId: true },
+  });
+  const officers = await db.user.findMany({
+    where: {
+      status: "ACTIVE",
+      branchAssignments: {
+        some: { branchId: group.branchId, effectiveTo: null },
+      },
+      roles: {
+        some: {
+          effectiveTo: null,
+          role: { code: { in: ["MANAGER", "LOAN_OFFICER"] } },
+        },
+      },
+    },
+    orderBy: { name: "asc" },
+    select: { id: true, name: true },
   });
   const latestReview = group.activationReviews[0];
   const canManage = canPerformPermission(
@@ -221,6 +238,22 @@ export default async function GroupPage({
             />
           </div>
           <aside className="space-y-6">
+            {canManage && (
+              <Card className="p-5">
+                <h2 className="font-bold">Manage group</h2>
+                <p className="text-muted mt-1 text-sm">
+                  Update group details or suspend future activity without
+                  deleting history.
+                </p>
+                <GroupEditForm
+                  groupId={group.groupNumber}
+                  name={group.name}
+                  officerId={group.officerId ?? officers[0]?.id ?? ""}
+                  officers={officers}
+                  status={group.status}
+                />
+              </Card>
+            )}
             <GroupWorkflowActions
               groupId={group.groupNumber}
               status={group.status}

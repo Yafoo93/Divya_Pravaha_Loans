@@ -53,6 +53,14 @@ export default async function FieldSectionPage({
             Open sample cash form
           </Link>
         )}
+        {section === "handover" && (
+          <Link
+            href="/field/handovers/new"
+            className="bg-primary hover:bg-primary-hover mt-5 flex min-h-14 w-full items-center justify-center rounded-xl px-4 text-base font-bold text-white"
+          >
+            Prepare receipt batch
+          </Link>
+        )}
       </section>
     </main>
   );

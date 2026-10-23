@@ -23,8 +23,25 @@ describe("permission-aware workspace navigation", () => {
     );
     expect(labels).toContain("Cash collections");
     expect(labels).toContain("Handovers");
+    expect(labels).toContain("Today's assignments");
     expect(labels).not.toContain("Administration");
     expect(labels).not.toContain("Accounting & reports");
+  });
+
+  it("gives managers every non-administration workspace section", () => {
+    const managerLinks = navigationForRole("MANAGER").map((item) => item.href);
+    const operationalLinks = navigationForRole("MANAGER")
+      .filter((item) => !item.href.startsWith("/workspace/administration"))
+      .map((item) => item.href);
+    expect(managerLinks).toEqual(operationalLinks);
+    expect(managerLinks).toContain("/workspace/capital");
+    expect(managerLinks).toContain("/workspace/accounting");
+    expect(managerLinks).toContain("/workspace/cash-collections");
+    expect(managerLinks).toContain("/workspace/handovers");
+    expect(managerLinks).toContain("/field/assignments");
+    expect(
+      managerLinks.some((href) => href.startsWith("/workspace/administration")),
+    ).toBe(false);
   });
 
   it("gives the auditor read-only navigation coverage without collector-only actions", () => {

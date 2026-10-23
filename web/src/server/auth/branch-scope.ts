@@ -16,7 +16,9 @@ export type BranchScope = {
   branchIds: readonly string[];
 };
 
-type ActiveSession = NonNullable<Awaited<ReturnType<typeof requireServerSession>>>;
+type ActiveSession = NonNullable<
+  Awaited<ReturnType<typeof requireServerSession>>
+>;
 
 export class BranchScopeError extends Error {
   constructor(message = "This record is outside your assigned branch scope.") {
@@ -49,10 +51,7 @@ export function branchScopeWhere(scope: BranchScope) {
 }
 
 /** Combine caller filters with branch scope using AND so caller filters cannot widen access. */
-export function andBranchScope<T extends object>(
-  scope: BranchScope,
-  where: T,
-) {
+export function andBranchScope<T extends object>(scope: BranchScope, where: T) {
   return { AND: [where, branchScopeWhere(scope)] };
 }
 
@@ -88,7 +87,9 @@ export function assertSameBranch(
 ): void {
   assertBranchAccess(targetBranchId, scope);
   if (relatedBranchIds.some((branchId) => branchId !== targetBranchId)) {
-    throw new BranchScopeError("Related records must belong to the same branch.");
+    throw new BranchScopeError(
+      "Related records must belong to the same branch.",
+    );
   }
 }
 

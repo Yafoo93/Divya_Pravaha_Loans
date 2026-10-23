@@ -66,6 +66,12 @@ export const workspaceNavigation: readonly WorkspaceNavigationItem[] = [
     ],
   },
   {
+    label: "Today's assignments",
+    href: "/field/assignments",
+    shortLabel: "FA",
+    allowedRoles: ["MANAGER", "FIELD_COLLECTOR"],
+  },
+  {
     label: "Cash collections",
     href: "/workspace/cash-collections",
     shortLabel: "CC",

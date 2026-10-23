@@ -14,6 +14,92 @@ import {
 import { assertIndependentChecker } from "@/server/auth/maker-checker-policy";
 import { getServerSession } from "@/server/auth/session";
 
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  const session = await getServerSession();
+  const allowed = Boolean(
+    session &&
+    canPerformPermission(
+      session.user.permissions,
+      session.user.restrictions,
+      "manage_groups",
+      session.user.featureGate,
+      true,
+      session.user.role,
+    ),
+  );
+  if (!session || !allowed)
+    return NextResponse.json({ error: "Access denied." }, { status: 403 });
+  const scope = await requireBranchScope(session);
+  const { id } = await params;
+  const group = await db.borrowerGroup.findFirst({
+    where: andBranchScope(scope, { OR: [{ id }, { groupNumber: id }] }),
+  });
+  if (!group)
+    return NextResponse.json({ error: "Group not found." }, { status: 404 });
+  const body = (await request.json()) as Record<string, unknown>;
+  const action = body.action === "SUSPEND" ? "SUSPEND" : "UPDATE";
+  const now = new Date();
+  if (action === "SUSPEND") {
+    await db.$transaction([
+      db.borrowerGroup.update({
+        where: { id: group.id },
+        data: { status: "SUSPENDED" },
+      }),
+      db.groupStatusEvent.create({
+        data: {
+          eventNumber: `GSE-${randomUUID().slice(0, 12).toUpperCase()}`,
+          fromStatus: group.status,
+          toStatus: "SUSPENDED",
+          effectiveAt: now,
+          reason: "Group suspended by manager",
+          groupId: group.id,
+          recordedByUserId: session.user.id,
+        },
+      }),
+    ]);
+  } else {
+    const name = typeof body.name === "string" ? body.name.trim() : "";
+    const officerId = typeof body.officerId === "string" ? body.officerId : "";
+    if (name.length < 3 || !officerId)
+      return NextResponse.json(
+        { error: "Group name and assigned officer are required." },
+        { status: 400 },
+      );
+    const officer = await db.user.findFirst({
+      where: {
+        id: officerId,
+        status: "ACTIVE",
+        branchAssignments: {
+          some: { branchId: group.branchId, effectiveTo: null },
+        },
+      },
+      select: { id: true },
+    });
+    if (!officer)
+      return NextResponse.json(
+        { error: "Select an active staff member assigned to this branch." },
+        { status: 400 },
+      );
+    await db.borrowerGroup.update({
+      where: { id: group.id },
+      data: { name, officerId },
+    });
+  }
+  await recordAuditEvent({
+    eventType: action === "SUSPEND" ? "GROUP_SUSPENDED" : "GROUP_UPDATED",
+    outcome: "SUCCESS",
+    actorUserId: session.user.id,
+    permission: "manage_groups",
+    resource: `group:${group.groupNumber}`,
+    reason: action.toLowerCase(),
+    branchId: group.branchId,
+  });
+  return NextResponse.json({ ok: true });
+}
+
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },

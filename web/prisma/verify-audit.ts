@@ -35,14 +35,18 @@ async function main() {
     (eventType) => !coveredTypes.has(eventType),
   );
   if (missingTypes.length > 0) {
-    throw new Error(`Missing required audit event coverage: ${missingTypes.join(", ")}`);
+    throw new Error(
+      `Missing required audit event coverage: ${missingTypes.join(", ")}`,
+    );
   }
 
   const event = await client.query<{ id: string }>(`
     SELECT id FROM audit_events ORDER BY "createdAt" DESC LIMIT 1
   `);
   if (event.rowCount === 0) {
-    console.log("Audit trigger enabled. Create one audit event to test mutation rejection.");
+    console.log(
+      "Audit trigger enabled. Create one audit event to test mutation rejection.",
+    );
     return;
   }
 

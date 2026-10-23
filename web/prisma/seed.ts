@@ -350,6 +350,9 @@ async function main() {
     const manager = await tx.user.findUniqueOrThrow({
       where: { staffNumber: "STF-0001" },
     });
+    const cashier = await tx.user.findUniqueOrThrow({
+      where: { staffNumber: "STF-0006" },
+    });
     const accessedDocument = await tx.document.findUniqueOrThrow({
       where: { documentNumber: "DOC-KYC-CUS-0132" },
       include: { versions: { where: { version: 1 }, take: 1 } },
@@ -599,6 +602,31 @@ async function main() {
       },
     });
 
+    const loanProduct = await tx.loanProduct.upsert({
+      where: { code_version: { code: "GROUP_FLAT_20", version: 1 } },
+      update: {
+        name: "Group Flat 20%",
+        interestRatePercent: 20,
+        maximumTermMonths: 6,
+        supportedFrequencies: ["WEEKLY", "FORTNIGHTLY", "MONTHLY"],
+        effectiveFrom: new Date("2026-01-01T00:00:00Z"),
+        effectiveTo: null,
+        isActive: true,
+        isSampleData: true,
+      },
+      create: {
+        code: "GROUP_FLAT_20",
+        version: 1,
+        name: "Group Flat 20%",
+        interestRatePercent: 20,
+        maximumTermMonths: 6,
+        supportedFrequencies: ["WEEKLY", "FORTNIGHTLY", "MONTHLY"],
+        effectiveFrom: new Date("2026-01-01T00:00:00Z"),
+        isActive: true,
+        isSampleData: true,
+      },
+    });
+
     const loan = await tx.loan.upsert({
       where: { loanNumber: "LN-0204" },
       update: {
@@ -612,6 +640,7 @@ async function main() {
         branchId: branch.id,
         borrowerId: borrowers.get("CUS-0104")!.id,
         groupId: group.id,
+        productId: loanProduct.id,
         isSampleData: true,
       },
       create: {
@@ -626,6 +655,67 @@ async function main() {
         branchId: branch.id,
         borrowerId: borrowers.get("CUS-0104")!.id,
         groupId: group.id,
+        productId: loanProduct.id,
+        isSampleData: true,
+      },
+    });
+    const activeLoanTerms = await tx.loanTermsSnapshot.upsert({
+      where: { snapshotNumber: "LTS-LN-0204-V1" },
+      update: {
+        version: 1,
+        principalPesewas: 1_000_000,
+        contractualInterest: 200_000,
+        totalRepayablePesewas: 1_200_000,
+        termMonths: 6,
+        repaymentFrequency: "MONTHLY",
+        businessPurpose: "Working capital for market trading.",
+        productCode: "GROUP_FLAT_20",
+        productVersion: 1,
+        submittedAt: new Date("2026-04-29T10:00:00Z"),
+        loanId: loan.id,
+        createdByUserId: loanOfficer.id,
+        isSampleData: true,
+      },
+      create: {
+        snapshotNumber: "LTS-LN-0204-V1",
+        version: 1,
+        principalPesewas: 1_000_000,
+        contractualInterest: 200_000,
+        totalRepayablePesewas: 1_200_000,
+        termMonths: 6,
+        repaymentFrequency: "MONTHLY",
+        businessPurpose: "Working capital for market trading.",
+        productCode: "GROUP_FLAT_20",
+        productVersion: 1,
+        submittedAt: new Date("2026-04-29T10:00:00Z"),
+        loanId: loan.id,
+        createdByUserId: loanOfficer.id,
+        isSampleData: true,
+      },
+    });
+    const activeLoanGuarantee = await tx.loanGuaranteeSnapshot.upsert({
+      where: { snapshotNumber: "LGS-LN-0204-V1" },
+      update: {
+        version: 1,
+        guarantorBorrowerIds: people
+          .map(([customerId]) => borrowers.get(customerId)!.id)
+          .filter((id) => id !== borrowers.get("CUS-0104")!.id),
+        agreementNumber: "GA-GRP-0018-V2",
+        agreementVersion: 2,
+        loanId: loan.id,
+        termsSnapshotId: activeLoanTerms.id,
+        isSampleData: true,
+      },
+      create: {
+        snapshotNumber: "LGS-LN-0204-V1",
+        version: 1,
+        guarantorBorrowerIds: people
+          .map(([customerId]) => borrowers.get(customerId)!.id)
+          .filter((id) => id !== borrowers.get("CUS-0104")!.id),
+        agreementNumber: "GA-GRP-0018-V2",
+        agreementVersion: 2,
+        loanId: loan.id,
+        termsSnapshotId: activeLoanTerms.id,
         isSampleData: true,
       },
     });
@@ -642,6 +732,7 @@ async function main() {
         branchId: branch.id,
         borrowerId: borrowers.get("CUS-0129")!.id,
         groupId: group.id,
+        productId: loanProduct.id,
         isSampleData: true,
       },
       create: {
@@ -656,6 +747,218 @@ async function main() {
         branchId: branch.id,
         borrowerId: borrowers.get("CUS-0129")!.id,
         groupId: group.id,
+        productId: loanProduct.id,
+        isSampleData: true,
+      },
+    });
+
+    const existingSampleRelease = await tx.disbursement.findFirst({
+      where: { loan: { loanNumber: "APP-0268" } },
+    });
+    const sampleApplication = await tx.loan.upsert({
+      where: { loanNumber: "APP-0268" },
+      update: {
+        status: existingSampleRelease ? "ACTIVE" : "AWAITING_DISBURSEMENT",
+        principalPesewas: 1_000_000,
+        contractualInterest: 200_000,
+        totalRepayablePesewas: 1_200_000,
+        termMonths: 6,
+        repaymentFrequency: "MONTHLY",
+        businessPurpose: "Expand grocery stock for the festive season.",
+        disbursedAt: existingSampleRelease?.actualCashOutAt ?? null,
+        branchId: branch.id,
+        borrowerId: borrowers.get("CUS-0132")!.id,
+        groupId: group.id,
+        productId: loanProduct.id,
+        submittedByUserId: loanOfficer.id,
+        isSampleData: true,
+      },
+      create: {
+        loanNumber: "APP-0268",
+        status: "AWAITING_DISBURSEMENT",
+        principalPesewas: 1_000_000,
+        contractualInterest: 200_000,
+        totalRepayablePesewas: 1_200_000,
+        termMonths: 6,
+        repaymentFrequency: "MONTHLY",
+        businessPurpose: "Expand grocery stock for the festive season.",
+        branchId: branch.id,
+        borrowerId: borrowers.get("CUS-0132")!.id,
+        groupId: group.id,
+        productId: loanProduct.id,
+        submittedByUserId: loanOfficer.id,
+        isSampleData: true,
+      },
+    });
+    const submittedTerms = await tx.loanTermsSnapshot.upsert({
+      where: { snapshotNumber: "LTS-APP-0268-V1" },
+      update: {
+        version: 1,
+        principalPesewas: 1_000_000,
+        contractualInterest: 200_000,
+        totalRepayablePesewas: 1_200_000,
+        termMonths: 6,
+        repaymentFrequency: "MONTHLY",
+        businessPurpose: "Expand grocery stock for the festive season.",
+        productCode: "GROUP_FLAT_20",
+        productVersion: 1,
+        submittedAt: new Date("2026-10-16T14:02:00Z"),
+        loanId: sampleApplication.id,
+        createdByUserId: loanOfficer.id,
+        isSampleData: true,
+      },
+      create: {
+        snapshotNumber: "LTS-APP-0268-V1",
+        version: 1,
+        principalPesewas: 1_000_000,
+        contractualInterest: 200_000,
+        totalRepayablePesewas: 1_200_000,
+        termMonths: 6,
+        repaymentFrequency: "MONTHLY",
+        businessPurpose: "Expand grocery stock for the festive season.",
+        productCode: "GROUP_FLAT_20",
+        productVersion: 1,
+        submittedAt: new Date("2026-10-16T14:02:00Z"),
+        loanId: sampleApplication.id,
+        createdByUserId: loanOfficer.id,
+        isSampleData: true,
+      },
+    });
+    await tx.loanGuaranteeSnapshot.upsert({
+      where: { snapshotNumber: "LGS-APP-0268-V1" },
+      update: {
+        version: 1,
+        guarantorBorrowerIds: people
+          .map(([customerId]) => borrowers.get(customerId)!.id)
+          .filter((id) => id !== borrowers.get("CUS-0132")!.id),
+        agreementNumber: "GA-GRP-0018-V2",
+        agreementVersion: 2,
+        loanId: sampleApplication.id,
+        termsSnapshotId: submittedTerms.id,
+        isSampleData: true,
+      },
+      create: {
+        snapshotNumber: "LGS-APP-0268-V1",
+        version: 1,
+        guarantorBorrowerIds: people
+          .map(([customerId]) => borrowers.get(customerId)!.id)
+          .filter((id) => id !== borrowers.get("CUS-0132")!.id),
+        agreementNumber: "GA-GRP-0018-V2",
+        agreementVersion: 2,
+        loanId: sampleApplication.id,
+        termsSnapshotId: submittedTerms.id,
+        isSampleData: true,
+      },
+    });
+    await tx.loanApplicationEvent.upsert({
+      where: { eventNumber: "LAE-APP-0268-SUBMITTED" },
+      update: {
+        eventType: "APPLICATION_SUBMITTED",
+        fromStatus: "DRAFT",
+        toStatus: "SUBMITTED",
+        reason:
+          "Complete application submitted for independent manager review.",
+        occurredAt: new Date("2026-10-16T14:02:00Z"),
+        loanId: sampleApplication.id,
+        actorUserId: loanOfficer.id,
+        isSampleData: true,
+      },
+      create: {
+        eventNumber: "LAE-APP-0268-SUBMITTED",
+        eventType: "APPLICATION_SUBMITTED",
+        fromStatus: "DRAFT",
+        toStatus: "SUBMITTED",
+        reason:
+          "Complete application submitted for independent manager review.",
+        occurredAt: new Date("2026-10-16T14:02:00Z"),
+        loanId: sampleApplication.id,
+        actorUserId: loanOfficer.id,
+        isSampleData: true,
+      },
+    });
+    for (const [documentNumber, type] of [
+      ["LAD-APP-0268-KYC", "IDENTITY_VERIFICATION"],
+      ["LAD-APP-0268-BUS", "BUSINESS_ASSESSMENT"],
+      ["LAD-APP-0268-CONS", "BORROWER_CONSENT"],
+    ] as const) {
+      await tx.loanApplicationDocument.upsert({
+        where: { documentNumber },
+        update: { status: "ATTACHED", loanId: sampleApplication.id },
+        create: {
+          documentNumber,
+          type,
+          reference: `private://loan-applications/APP-0268/${documentNumber}`,
+          status: "ATTACHED",
+          loanId: sampleApplication.id,
+          isSampleData: true,
+        },
+      });
+    }
+    await tx.loanApplicationDocument.upsert({
+      where: { documentNumber: "LAD-APP-0268-CONTRACT" },
+      update: {
+        type: "SIGNED_CONTRACT",
+        reference:
+          "private://loan-applications/APP-0268/signed-contract-v1.pdf",
+        status: "VERIFIED",
+        loanId: sampleApplication.id,
+        isSampleData: true,
+      },
+      create: {
+        documentNumber: "LAD-APP-0268-CONTRACT",
+        type: "SIGNED_CONTRACT",
+        reference:
+          "private://loan-applications/APP-0268/signed-contract-v1.pdf",
+        status: "VERIFIED",
+        loanId: sampleApplication.id,
+        isSampleData: true,
+      },
+    });
+    await tx.loanDecision.upsert({
+      where: { decisionNumber: "DEC-APP-0268-V1" },
+      update: {
+        status: "APPROVED",
+        reason:
+          "Verified business need, complete KYC, signed group guarantee, and product-compliant terms.",
+        decidedAt: new Date("2026-10-16T14:20:00Z"),
+        loanId: sampleApplication.id,
+        termsSnapshotId: submittedTerms.id,
+        decidedByUserId: manager.id,
+        isSampleData: true,
+      },
+      create: {
+        decisionNumber: "DEC-APP-0268-V1",
+        status: "APPROVED",
+        reason:
+          "Verified business need, complete KYC, signed group guarantee, and product-compliant terms.",
+        decidedAt: new Date("2026-10-16T14:20:00Z"),
+        loanId: sampleApplication.id,
+        termsSnapshotId: submittedTerms.id,
+        decidedByUserId: manager.id,
+        isSampleData: true,
+      },
+    });
+    await tx.loanApplicationEvent.upsert({
+      where: { eventNumber: "LAE-APP-0268-APPROVED" },
+      update: {
+        eventType: "APPLICATION_APPROVED",
+        fromStatus: "UNDER_REVIEW",
+        toStatus: "AWAITING_DISBURSEMENT",
+        reason: "Independent manager approval issued.",
+        occurredAt: new Date("2026-10-16T14:20:00Z"),
+        loanId: sampleApplication.id,
+        actorUserId: manager.id,
+        isSampleData: true,
+      },
+      create: {
+        eventNumber: "LAE-APP-0268-APPROVED",
+        eventType: "APPLICATION_APPROVED",
+        fromStatus: "UNDER_REVIEW",
+        toStatus: "AWAITING_DISBURSEMENT",
+        reason: "Independent manager approval issued.",
+        occurredAt: new Date("2026-10-16T14:20:00Z"),
+        loanId: sampleApplication.id,
+        actorUserId: manager.id,
         isSampleData: true,
       },
     });
@@ -668,9 +971,16 @@ async function main() {
         interestAllocatedPesewas: 5_000,
         status: "CAPTURED",
         receivedAt: new Date("2026-10-16T14:40:00Z"),
+        idempotencyKey: "SEED-RCT-20261016-0057",
+        collectionNote: "Part payment received at the borrower market stall.",
         branchId: branch.id,
         borrowerId: borrowers.get("CUS-0104")!.id,
         loanId: loan.id,
+        collectorUserId: (
+          await tx.user.findUniqueOrThrow({
+            where: { staffNumber: "STF-0005" },
+          })
+        ).id,
         isSampleData: true,
       },
       create: {
@@ -680,9 +990,16 @@ async function main() {
         interestAllocatedPesewas: 5_000,
         status: "CAPTURED",
         receivedAt: new Date("2026-10-16T14:40:00Z"),
+        idempotencyKey: "SEED-RCT-20261016-0057",
+        collectionNote: "Part payment received at the borrower market stall.",
         branchId: branch.id,
         borrowerId: borrowers.get("CUS-0104")!.id,
         loanId: loan.id,
+        collectorUserId: (
+          await tx.user.findUniqueOrThrow({
+            where: { staffNumber: "STF-0005" },
+          })
+        ).id,
         isSampleData: true,
       },
     });
@@ -697,6 +1014,7 @@ async function main() {
         loanId: loan.id,
         borrowerId: borrowers.get("CUS-0104")!.id,
         guarantorBorrowerId: borrowers.get("CUS-0132")!.id,
+        guaranteeSnapshotId: activeLoanGuarantee.id,
         isSampleData: true,
       },
       create: {
@@ -709,8 +1027,16 @@ async function main() {
         loanId: loan.id,
         borrowerId: borrowers.get("CUS-0104")!.id,
         guarantorBorrowerId: borrowers.get("CUS-0132")!.id,
+        guaranteeSnapshotId: activeLoanGuarantee.id,
         isSampleData: true,
       },
+    });
+
+    // Older development databases may contain arrears that were generated
+    // from sample loans before sample-data propagation was enforced.
+    await tx.arrear.updateMany({
+      where: { loan: { isSampleData: true }, isSampleData: false },
+      data: { isSampleData: true },
     });
 
     const accountData = [
@@ -718,8 +1044,12 @@ async function main() {
       ["1010", "Collector Cash Custody", "ASSET"],
       ["1100", "Loan Principal Receivable", "ASSET"],
       ["1110", "Interest Receivable", "ASSET"],
+      ["1200", "Credit-loss Allowance", "CONTRA_ASSET"],
+      ["2000", "Unidentified Receipts Suspense", "LIABILITY"],
+      ["2010", "Customer Overpayments Refundable", "LIABILITY"],
       ["3000", "Owner Capital", "EQUITY"],
       ["4000", "Loan Interest Income", "INCOME"],
+      ["5000", "Credit-loss Expense", "EXPENSE"],
     ] as const;
     const accounts = new Map<string, { id: string }>();
     for (const [code, name, type] of accountData)
@@ -731,6 +1061,48 @@ async function main() {
           create: { code, name, type, isSampleData: true },
         }),
       );
+
+    const periodDefinitions = [
+      [
+        "2026-04",
+        "April 2026",
+        "2026-04-01T00:00:00Z",
+        "2026-04-30T23:59:59.999Z",
+        "CLOSED",
+      ],
+      [
+        "2026-09",
+        "September 2026",
+        "2026-09-01T00:00:00Z",
+        "2026-09-30T23:59:59.999Z",
+        "CLOSED",
+      ],
+      [
+        "2026-10",
+        "October 2026",
+        "2026-10-01T00:00:00Z",
+        "2026-10-31T23:59:59.999Z",
+        "OPEN",
+      ],
+    ] as const;
+    const periods = new Map<string, { id: string }>();
+    for (const [month, name, startsAt, endsAt, status] of periodDefinitions) {
+      const period = await tx.accountingPeriod.upsert({
+        where: { periodKey: `${month}-${branch.code}` },
+        update: {},
+        create: {
+          periodKey: `${month}-${branch.code}`,
+          name,
+          startsAt: new Date(startsAt),
+          endsAt: new Date(endsAt),
+          status,
+          closedAt: status === "CLOSED" ? new Date(endsAt) : null,
+          branchId: branch.id,
+          isSampleData: true,
+        },
+      });
+      periods.set(month, period);
+    }
 
     const journals = [
       [
@@ -776,37 +1148,342 @@ async function main() {
       entryDate,
       lines,
     ] of journals) {
-      const journal = await tx.journalEntry.upsert({
+      const existingJournal = await tx.journalEntry.findUnique({
         where: { journalNumber },
-        update: {
-          description,
+      });
+      if (!existingJournal) {
+        const periodKey = entryDate.toISOString().slice(0, 7);
+        const journal = await tx.journalEntry.create({
+          data: {
+            journalNumber,
+            description,
+            sourceEventType,
+            sourceReference,
+            entryDate,
+            branchId: branch.id,
+            periodId: periods.get(periodKey)!.id,
+            actorUserId: cashier.id,
+            isSampleData: true,
+          },
+        });
+        await tx.journalLine.createMany({
+          data: lines.map(([code, debitPesewas, creditPesewas]) => ({
+            journalId: journal.id,
+            accountId: accounts.get(code)!.id,
+            debitPesewas,
+            creditPesewas,
+            isSampleData: true,
+          })),
+        });
+      }
+    }
+
+    async function seedExceptionJournal(
+      journalNumber: string,
+      sourceEventType: string,
+      sourceReference: string,
+      description: string,
+      debitCode: string,
+      creditCode: string,
+      amountPesewas: number,
+    ) {
+      const existing = await tx.journalEntry.findUnique({
+        where: { journalNumber },
+      });
+      if (existing) return existing;
+      return tx.journalEntry.create({
+        data: {
+          journalNumber,
           sourceEventType,
           sourceReference,
-          entryDate,
+          description,
+          entryDate: new Date("2026-10-16T15:00:00Z"),
           branchId: branch.id,
+          periodId: periods.get("2026-10")!.id,
+          actorUserId: cashier.id,
+          isSampleData: true,
+          lines: {
+            create: [
+              {
+                accountId: accounts.get(debitCode)!.id,
+                debitPesewas: amountPesewas,
+                isSampleData: true,
+              },
+              {
+                accountId: accounts.get(creditCode)!.id,
+                creditPesewas: amountPesewas,
+                isSampleData: true,
+              },
+            ],
+          },
+        },
+      });
+    }
+    const suspenseJournal = await seedExceptionJournal(
+      "J-SUS-0012",
+      "UNIDENTIFIED_CASH",
+      "UNIDENTIFIED-0012",
+      "Unidentified cash held in suspense",
+      "1000",
+      "2000",
+      5_000,
+    );
+    await tx.suspenseItem.upsert({
+      where: { suspenseNumber: "SUS-0012" },
+      update: {},
+      create: {
+        suspenseNumber: "SUS-0012",
+        sourceReference: "UNIDENTIFIED-0012",
+        amountPesewas: 5_000,
+        status: "PENDING",
+        branchId: branch.id,
+        originJournalId: suspenseJournal.id,
+        isSampleData: true,
+      },
+    });
+    const overpaymentJournal = await seedExceptionJournal(
+      "J-OVP-0007",
+      "CUSTOMER_OVERPAYMENT",
+      "OVERPAYMENT-0007",
+      "Verified customer overpayment liability",
+      "1000",
+      "2010",
+      12_500,
+    );
+    await tx.overpaymentLiability.upsert({
+      where: { liabilityNumber: "OVP-0007" },
+      update: {},
+      create: {
+        liabilityNumber: "OVP-0007",
+        payerName: "Abena Boateng",
+        payerReference: "GHA-VERIFIED-421",
+        amountPesewas: 12_500,
+        branchId: branch.id,
+        originJournalId: overpaymentJournal.id,
+        isSampleData: true,
+      },
+    });
+
+    const ownerFundAccount = await tx.fundAccount.upsert({
+      where: { accountNumber: "FUND-OWNER-KASOA" },
+      update: {
+        name: "Verified owner capital",
+        eligibleForFunding: true,
+        exclusionReason: null,
+        isSampleData: true,
+      },
+      create: {
+        accountNumber: "FUND-OWNER-KASOA",
+        name: "Verified owner capital",
+        sourceType: "OWNER_CAPITAL",
+        eligibleForFunding: true,
+        branchId: branch.id,
+        isSampleData: true,
+      },
+    });
+
+    const excludedFundAccounts = [
+      [
+        "FUND-CUSTODY-KASOA",
+        "Collector cash custody",
+        "EXCLUDED_CUSTODY",
+        "Cash remains under collector custody until verified handover",
+      ],
+      [
+        "FUND-RECEIVABLE-KASOA",
+        "Outstanding receivables",
+        "EXCLUDED_RECEIVABLE",
+        "Receivables are not verified cash",
+      ],
+      [
+        "FUND-SUSPENSE-KASOA",
+        "Unidentified cash",
+        "EXCLUDED_SUSPENSE",
+        "Restricted until ownership is identified",
+      ],
+      [
+        "FUND-OVERPAY-KASOA",
+        "Customer overpayments",
+        "EXCLUDED_OVERPAYMENT",
+        "Refundable customer liability",
+      ],
+      [
+        "FUND-INVESTOR-KASOA",
+        "Investor principal",
+        "INVESTOR_PRINCIPAL",
+        "Locked pending legal and accounting activation",
+      ],
+    ] as const;
+    for (const [
+      accountNumber,
+      name,
+      sourceType,
+      exclusionReason,
+    ] of excludedFundAccounts) {
+      await tx.fundAccount.upsert({
+        where: { accountNumber },
+        update: {
+          name,
+          sourceType,
+          exclusionReason,
+          eligibleForFunding: false,
           isSampleData: true,
         },
         create: {
-          journalNumber,
-          description,
-          sourceEventType,
-          sourceReference,
-          entryDate,
+          accountNumber,
+          name,
+          sourceType,
+          exclusionReason,
+          eligibleForFunding: false,
           branchId: branch.id,
           isSampleData: true,
         },
       });
-      await tx.journalLine.deleteMany({ where: { journalId: journal.id } });
-      await tx.journalLine.createMany({
-        data: lines.map(([code, debitPesewas, creditPesewas]) => ({
-          journalId: journal.id,
-          accountId: accounts.get(code)!.id,
-          debitPesewas,
-          creditPesewas,
+    }
+
+    const lotDefinitions = [
+      [
+        "CAP-001",
+        "Owner capital lot 1",
+        "CAP-EVIDENCE-001",
+        3_000_000,
+        2_000_000,
+        1_000_000,
+      ],
+      [
+        "CAP-002",
+        "Owner capital lot 2",
+        "CAP-EVIDENCE-002",
+        1_800_000,
+        1_800_000,
+        0,
+      ],
+      [
+        "CAP-003",
+        "Owner capital lot 3",
+        "CAP-EVIDENCE-003",
+        1_000_000,
+        1_000_000,
+        0,
+      ],
+    ] as const;
+    const capitalLots = new Map<string, { id: string }>();
+    for (const [
+      lotNumber,
+      description,
+      evidenceReference,
+      originalPesewas,
+      availablePesewas,
+      reservedPesewas,
+    ] of lotDefinitions) {
+      const lot = await tx.fundLot.upsert({
+        where: { lotNumber },
+        update: {},
+        create: {
+          lotNumber,
+          description,
+          evidenceReference,
+          receivedAt: new Date("2026-04-01T09:00:00Z"),
+          verifiedAt: new Date("2026-04-01T10:00:00Z"),
+          originalPesewas,
+          availablePesewas,
+          reservedPesewas,
+          status: reservedPesewas > 0 ? "RESERVED" : "AVAILABLE",
+          fundAccountId: ownerFundAccount.id,
           isSampleData: true,
-        })),
+        },
+      });
+      capitalLots.set(lotNumber, lot);
+      await tx.fundMovement.upsert({
+        where: { sourceReference: `VERIFY-${lotNumber}` },
+        update: {},
+        create: {
+          movementNumber: `MOV-VERIFY-${lotNumber}`,
+          movementType: "AVAILABLE",
+          sourceReference: `VERIFY-${lotNumber}`,
+          amountPesewas: originalPesewas,
+          notes: "Owner capital evidence verified and made available",
+          occurredAt: new Date("2026-04-01T10:00:00Z"),
+          fundLotId: lot.id,
+          actorUserId: cashier.id,
+          isSampleData: true,
+        },
       });
     }
+
+    const reservation = await tx.fundingReservation.upsert({
+      where: { reservationNumber: "RES-0268" },
+      update: {
+        amountPesewas: 1_000_000,
+        status: existingSampleRelease ? "COMMITTED" : "RESERVED",
+        reservedAt: new Date("2026-10-16T14:25:00Z"),
+        committedAt: existingSampleRelease?.actualCashOutAt ?? null,
+        cancelledAt: null,
+        fundLotId: capitalLots.get("CAP-001")!.id,
+        loanId: sampleApplication.id,
+        isSampleData: true,
+      },
+      create: {
+        reservationNumber: "RES-0268",
+        amountPesewas: 1_000_000,
+        status: "RESERVED",
+        reservedAt: new Date("2026-10-16T14:25:00Z"),
+        fundLotId: capitalLots.get("CAP-001")!.id,
+        loanId: sampleApplication.id,
+        isSampleData: true,
+      },
+    });
+    await tx.fundMovement.upsert({
+      where: { sourceReference: reservation.reservationNumber },
+      update: {},
+      create: {
+        movementNumber: "MOV-RES-0268",
+        movementType: "RESERVED",
+        sourceReference: reservation.reservationNumber,
+        amountPesewas: reservation.amountPesewas,
+        notes: "Verified owner capital reserved for approved loan",
+        occurredAt: reservation.reservedAt,
+        fundLotId: capitalLots.get("CAP-001")!.id,
+        actorUserId: cashier.id,
+        isSampleData: true,
+      },
+    });
+
+    const allocation = await tx.fundAllocation.upsert({
+      where: { allocationNumber: "ALLOC-LN-0204" },
+      update: {},
+      create: {
+        allocationNumber: "ALLOC-LN-0204",
+        amountPesewas: 1_000_000,
+        recoveredPrincipalPesewas: 166_667,
+        recoveredInterestPesewas: 33_333,
+        status: "RECOVERED",
+        allocatedAt: new Date("2026-04-29T14:00:00Z"),
+        disbursedAt: new Date("2026-04-30T10:00:00Z"),
+        recoveredAt: new Date("2026-09-30T14:40:00Z"),
+        fundLotId: capitalLots.get("CAP-002")!.id,
+        loanId: loan.id,
+        isSampleData: true,
+      },
+    });
+    await tx.fundMovement.upsert({
+      where: { sourceReference: "RCT-RECOVERY-CAP-002" },
+      update: {},
+      create: {
+        movementNumber: "MOV-RECOVERY-CAP-002",
+        movementType: "RECOVERED",
+        sourceReference: "RCT-RECOVERY-CAP-002",
+        amountPesewas: 200_000,
+        principalAmountPesewas: allocation.recoveredPrincipalPesewas,
+        interestAmountPesewas: allocation.recoveredInterestPesewas,
+        notes:
+          "Principal recovery attributed to original lot; interest retained separately",
+        occurredAt: new Date("2026-09-30T14:40:00Z"),
+        fundLotId: capitalLots.get("CAP-002")!.id,
+        actorUserId: cashier.id,
+        isSampleData: true,
+      },
+    });
 
     const auditActors = await tx.user.findMany({
       where: {

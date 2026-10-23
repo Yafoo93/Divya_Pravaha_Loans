@@ -30,7 +30,39 @@ describe("prototype role matrix", () => {
       filterPrototypeRoles(prototypeRoles, "reconciliation", "ALL").map(
         (role) => role.code,
       ),
-    ).toEqual(["CASHIER_ACCOUNTANT"]);
+    ).toEqual(["MANAGER", "CASHIER_ACCOUNTANT"]);
     expect(countStaffByRole(prototypeStaff, "MANAGER")).toBe(2);
+  });
+
+  it("gives managers every loan officer capability", () => {
+    const manager = prototypeRoles.find((role) => role.code === "MANAGER")!;
+    const loanOfficer = prototypeRoles.find(
+      (role) => role.code === "LOAN_OFFICER",
+    )!;
+    expect(
+      loanOfficer.permissions.every((permission) =>
+        manager.permissions.includes(permission),
+      ),
+    ).toBe(true);
+  });
+
+  it("gives managers operational and finance access but no system administration", () => {
+    const manager = prototypeRoles.find((role) => role.code === "MANAGER")!;
+    expect(manager.permissions).toEqual(
+      expect.arrayContaining([
+        "Record cash receipts",
+        "Verify cash handovers",
+        "Manage ledger",
+        "Prepare period close",
+        "Read financial history",
+      ]),
+    );
+    expect(manager.permissions).not.toEqual(
+      expect.arrayContaining([
+        "Manage users",
+        "Manage roles",
+        "Manage security configuration",
+      ]),
+    );
   });
 });

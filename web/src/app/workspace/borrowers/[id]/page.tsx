@@ -13,6 +13,7 @@ import { andBranchScope, requireBranchScope } from "@/server/auth/branch-scope";
 import { requireWorkspacePath } from "@/server/auth/session";
 import { PageHeading } from "../../../components/page-heading";
 import { BorrowerRestrictionWorkflow } from "../../../components/borrower-restriction-workflow";
+import { BorrowerEditForm } from "../../../components/borrower-edit-form";
 import { PrivateDocumentAccess } from "../../../components/private-document-access";
 import {
   Badge,
@@ -106,6 +107,14 @@ export default async function BorrowerProfilePage({
   const unpaidAmount = unresolvedArrears.reduce(
     (total, arrear) => total + arrear.unpaidAmountPesewas,
     0,
+  );
+  const canManageBorrower = canPerformPermission(
+    session.user.permissions,
+    session.user.restrictions,
+    "manage_borrower_drafts",
+    session.user.featureGate,
+    true,
+    session.user.role,
   );
 
   const history = [
@@ -309,6 +318,17 @@ export default async function BorrowerProfilePage({
                   }
                 />
               </dl>
+              {canManageBorrower && (
+                <BorrowerEditForm
+                  borrowerId={borrower.customerId}
+                  initial={{
+                    legalName: borrower.legalName,
+                    phone: borrower.phone,
+                    residentialAddress: borrower.residentialAddress,
+                    businessDetails: borrower.businessDetails,
+                  }}
+                />
+              )}
             </Card>
 
             <TableCard
@@ -367,14 +387,7 @@ export default async function BorrowerProfilePage({
             <BorrowerRestrictionWorkflow
               borrowerId={borrower.customerId}
               borrowerStatus={borrower.status}
-              canManage={canPerformPermission(
-                session.user.permissions,
-                session.user.restrictions,
-                "manage_borrower_drafts",
-                session.user.featureGate,
-                true,
-                session.user.role,
-              )}
+              canManage={canManageBorrower}
               canApprove={canPerformPermission(
                 session.user.permissions,
                 session.user.restrictions,

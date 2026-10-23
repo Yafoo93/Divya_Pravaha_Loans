@@ -56,10 +56,67 @@ enum ReceiptStatus {
   REVERSED
 }
 
+enum PaymentMethod {
+  CASH
+}
+
+enum PaymentSubmissionMode {
+  ONLINE
+}
+
+enum CustodyMovementType {
+  CASH_RECEIVED
+  HANDOVER_POSTED
+  REVERSAL
+}
+
+enum HandoverStatus {
+  DRAFT
+  SUBMITTED
+  VERIFIED
+  POSTED
+  RETURNED
+  CANCELLED
+}
+
+enum ReconciliationStatus {
+  BALANCED
+  EXCEPTION
+  RESOLVED
+}
+
+enum CashExceptionType {
+  SHORTAGE
+  EXCESS
+  UNIDENTIFIED_CASH
+}
+
+enum CashExceptionStatus {
+  OPEN
+  RESOLVED
+}
+
 enum ArrearStatus {
   PENDING_ASSESSMENT
   APPROVED
+  REJECTED
   RESOLVED
+}
+
+enum ArrearContributionStatus {
+  PENDING_APPROVAL
+  APPROVED
+  COLLECTED
+}
+
+enum ArrearDisputeStatus {
+  OPEN
+  RESOLVED
+}
+
+enum ArrearDecisionStatus {
+  APPROVED
+  REJECTED
 }
 
 enum BorrowerRestrictionStatus {
@@ -112,6 +169,33 @@ enum JournalStatus {
   REVERSED
 }
 
+enum ControlRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  RESOLVED
+}
+
+enum FundSourceType {
+  OWNER_CAPITAL
+  RECOVERED_PRINCIPAL
+  INTEREST_INCOME
+  INVESTOR_PRINCIPAL
+  EXCLUDED_CUSTODY
+  EXCLUDED_RECEIVABLE
+  EXCLUDED_SUSPENSE
+  EXCLUDED_OVERPAYMENT
+}
+
+enum FundLotStatus {
+  AVAILABLE
+  RESERVED
+  COMMITTED
+  DISBURSED
+  RECOVERED
+  CANCELLED
+}
+
 enum UserStatus {
   ACTIVE
   INACTIVE
@@ -119,20 +203,30 @@ enum UserStatus {
 }
 
 model Branch {
-  id                   String                  @id @default(cuid())
-  code                 String                  @unique @db.VarChar(20)
-  name                 String                  @db.VarChar(120)
-  isActive             Boolean                 @default(true)
-  isSampleData         Boolean                 @default(false)
-  staffAssignments     StaffBranchAssignment[]
-  borrowers            Borrower[]
-  groups               BorrowerGroup[]
-  loans                Loan[]
-  receipts             Receipt[]
-  journals             JournalEntry[]
-  borrowerRestrictions BorrowerRestriction[]
-  createdAt            DateTime                @default(now())
-  updatedAt            DateTime                @updatedAt
+  id                      String                   @id @default(cuid())
+  code                    String                   @unique @db.VarChar(20)
+  name                    String                   @db.VarChar(120)
+  isActive                Boolean                  @default(true)
+  isSampleData            Boolean                  @default(false)
+  staffAssignments        StaffBranchAssignment[]
+  borrowers               Borrower[]
+  groups                  BorrowerGroup[]
+  loans                   Loan[]
+  receipts                Receipt[]
+  assignments             Assignment[]
+  payments                Payment[]
+  custodyMovements        CustodyMovement[]
+  handovers               Handover[]
+  journals                JournalEntry[]
+  accountingPeriods       AccountingPeriod[]
+  periodReopeningRequests PeriodReopeningRequest[]
+  reversalRequests        ReversalRequest[]
+  suspenseItems           SuspenseItem[]
+  overpaymentLiabilities  OverpaymentLiability[]
+  fundAccounts            FundAccount[]
+  borrowerRestrictions    BorrowerRestriction[]
+  createdAt               DateTime                 @default(now())
+  updatedAt               DateTime                 @updatedAt
 
   @@map("branches")
 }
@@ -155,35 +249,63 @@ model Role {
 }
 
 model User {
-  id                       String                  @id @default(cuid())
-  staffNumber              String                  @unique @db.VarChar(30)
-  name                     String                  @db.VarChar(150)
-  email                    String                  @unique @db.VarChar(254)
-  passwordHash             String?                 @db.VarChar(255)
-  status                   UserStatus              @default(INACTIVE)
-  lastActiveAt             DateTime?
-  isSampleData             Boolean                 @default(false)
-  roles                    UserRole[]
-  branchAssignments        StaffBranchAssignment[]
-  sessions                 Session[]
-  restrictionsCreated      BorrowerRestriction[]   @relation("RestrictionMaker")
-  verificationsRecorded    Verification[]          @relation("VerificationOfficer")
-  consentsRecorded         ConsentRecord[]         @relation("ConsentRecorder")
-  assessmentsRecorded      BusinessAssessment[]    @relation("BusinessAssessor")
-  documentsUploaded        Document[]              @relation("DocumentUploader")
-  documentVersionsUploaded DocumentVersion[]       @relation("DocumentVersionUploader")
-  documentAccessEvents     DocumentAccessEvent[]   @relation("DocumentAccessor")
-  reactivationRequests     ReactivationDecision[]  @relation("DecisionRequester")
-  reactivationDecisions    ReactivationDecision[]  @relation("DecisionChecker")
-  groupsManaged            BorrowerGroup[]         @relation("GroupOfficer")
-  groupsCreated            BorrowerGroup[]         @relation("GroupCreator")
-  groupReviewsRequested    GroupActivationReview[] @relation("GroupReviewRequester")
-  groupReviewsDecided      GroupActivationReview[] @relation("GroupReviewChecker")
-  membershipChanges        GroupMembershipChange[] @relation("MembershipChangeRecorder")
-  groupVisitsRecorded      GroupVisit[]            @relation("GroupVisitOfficer")
-  groupStatusEvents        GroupStatusEvent[]      @relation("GroupStatusRecorder")
-  createdAt                DateTime                @default(now())
-  updatedAt                DateTime                @updatedAt
+  id                          String                   @id @default(cuid())
+  staffNumber                 String                   @unique @db.VarChar(30)
+  name                        String                   @db.VarChar(150)
+  email                       String                   @unique @db.VarChar(254)
+  passwordHash                String?                  @db.VarChar(255)
+  status                      UserStatus               @default(INACTIVE)
+  lastActiveAt                DateTime?
+  isSampleData                Boolean                  @default(false)
+  roles                       UserRole[]
+  branchAssignments           StaffBranchAssignment[]
+  sessions                    Session[]
+  restrictionsCreated         BorrowerRestriction[]    @relation("RestrictionMaker")
+  verificationsRecorded       Verification[]           @relation("VerificationOfficer")
+  consentsRecorded            ConsentRecord[]          @relation("ConsentRecorder")
+  assessmentsRecorded         BusinessAssessment[]     @relation("BusinessAssessor")
+  documentsUploaded           Document[]               @relation("DocumentUploader")
+  documentVersionsUploaded    DocumentVersion[]        @relation("DocumentVersionUploader")
+  documentAccessEvents        DocumentAccessEvent[]    @relation("DocumentAccessor")
+  reactivationRequests        ReactivationDecision[]   @relation("DecisionRequester")
+  reactivationDecisions       ReactivationDecision[]   @relation("DecisionChecker")
+  groupsManaged               BorrowerGroup[]          @relation("GroupOfficer")
+  groupsCreated               BorrowerGroup[]          @relation("GroupCreator")
+  groupReviewsRequested       GroupActivationReview[]  @relation("GroupReviewRequester")
+  groupReviewsDecided         GroupActivationReview[]  @relation("GroupReviewChecker")
+  membershipChanges           GroupMembershipChange[]  @relation("MembershipChangeRecorder")
+  groupVisitsRecorded         GroupVisit[]             @relation("GroupVisitOfficer")
+  groupStatusEvents           GroupStatusEvent[]       @relation("GroupStatusRecorder")
+  loanApplicationsCreated     Loan[]                   @relation("LoanApplicationCreator")
+  loanApplicationEvents       LoanApplicationEvent[]   @relation("LoanApplicationEventActor")
+  loanTermsSnapshots          LoanTermsSnapshot[]      @relation("LoanTermsSnapshotMaker")
+  loanDecisions               LoanDecision[]           @relation("LoanDecisionManager")
+  journalsPosted              JournalEntry[]           @relation("JournalActor")
+  reversalsAuthorized         Reversal[]               @relation("ReversalAuthorizer")
+  reversalRequestsMade        ReversalRequest[]        @relation("ReversalRequester")
+  reversalRequestsDecided     ReversalRequest[]        @relation("ReversalRequestChecker")
+  suspenseResolved            SuspenseItem[]           @relation("SuspenseResolver")
+  refundRequestsMade          RefundRequest[]          @relation("RefundRequester")
+  refundRequestsDecided       RefundRequest[]          @relation("RefundChecker")
+  periodReopenRequestsMade    PeriodReopeningRequest[] @relation("PeriodReopenRequester")
+  periodReopenRequestsDecided PeriodReopeningRequest[] @relation("PeriodReopenChecker")
+  fundMovementsRecorded       FundMovement[]           @relation("FundMovementActor")
+  disbursementsPrepared       Disbursement[]           @relation("DisbursementPreparer")
+  disbursementsAuthorized     Disbursement[]           @relation("DisbursementAuthorizer")
+  receiptsCollected           Receipt[]                @relation("ReceiptCollector")
+  collectionAssignments       Assignment[]             @relation("AssignmentCollector")
+  paymentsCollected           Payment[]                @relation("PaymentCollector")
+  custodyMovements            CustodyMovement[]        @relation("CustodyMovementCollector")
+  handoversSubmitted          Handover[]               @relation("HandoverCollector")
+  handoversChecked            Handover[]               @relation("HandoverChecker")
+  reconciliationsChecked      Reconciliation[]         @relation("ReconciliationChecker")
+  arrearAssessmentsCreated    Arrear[]                 @relation("ArrearAssessmentCreator")
+  arrearDecisions             ArrearDecision[]         @relation("ArrearDecisionManager")
+  arrearDisputesRecorded      ArrearDispute[]          @relation("ArrearDisputeRecorder")
+  arrearDisputesResolved      ArrearDispute[]          @relation("ArrearDisputeResolver")
+  arrearContributionsTaken    ArrearContribution[]     @relation("ArrearContributionCollector")
+  createdAt                   DateTime                 @default(now())
+  updatedAt                   DateTime                 @updatedAt
 
   @@index([status])
   @@map("users")
@@ -259,8 +381,11 @@ model Borrower {
   memberships             GroupMembership[]
   loans                   Loan[]
   receipts                Receipt[]
+  assignments             Assignment[]
+  payments                Payment[]
   arrears                 Arrear[]
   guaranteedContributions Arrear[]              @relation("ArrearGuarantor")
+  arrearContributions     ArrearContribution[]  @relation("ArrearContributionGuarantor")
   restrictions            BorrowerRestriction[]
   verifications           Verification[]
   consentRecords          ConsentRecord[]
@@ -606,26 +731,42 @@ model GroupStatusEvent {
 }
 
 model Loan {
-  id                    String             @id @default(cuid())
-  loanNumber            String             @unique @db.VarChar(30)
+  id                    String                    @id @default(cuid())
+  loanNumber            String                    @unique @db.VarChar(30)
   status                LoanStatus
   principalPesewas      Int
   contractualInterest   Int
   totalRepayablePesewas Int
   termMonths            Int
   repaymentFrequency    RepaymentFrequency
+  businessPurpose       String                    @default("General business working capital") @db.VarChar(500)
+  submittedByUserId     String?
+  productId             String?
   disbursedAt           DateTime?
-  isSampleData          Boolean            @default(false)
+  isSampleData          Boolean                   @default(false)
   branchId              String
   borrowerId            String
   groupId               String
-  branch                Branch             @relation(fields: [branchId], references: [id])
-  borrower              Borrower           @relation(fields: [borrowerId], references: [id])
-  group                 BorrowerGroup      @relation(fields: [groupId], references: [id])
+  branch                Branch                    @relation(fields: [branchId], references: [id])
+  borrower              Borrower                  @relation(fields: [borrowerId], references: [id])
+  group                 BorrowerGroup             @relation(fields: [groupId], references: [id])
+  submittedBy           User?                     @relation("LoanApplicationCreator", fields: [submittedByUserId], references: [id])
+  product               LoanProduct?              @relation(fields: [productId], references: [id])
+  applicationEvents     LoanApplicationEvent[]
+  applicationDocuments  LoanApplicationDocument[]
+  termsSnapshots        LoanTermsSnapshot[]
+  guaranteeSnapshots    LoanGuaranteeSnapshot[]
+  decisions             LoanDecision[]
   receipts              Receipt[]
+  assignments           Assignment[]
+  payments              Payment[]
   arrears               Arrear[]
-  createdAt             DateTime           @default(now())
-  updatedAt             DateTime           @updatedAt
+  fundingReservations   FundingReservation[]
+  fundAllocations       FundAllocation[]
+  disbursement          Disbursement?
+  repaymentInstalments  RepaymentInstalment[]
+  createdAt             DateTime                  @default(now())
+  updatedAt             DateTime                  @updatedAt
 
   @@index([branchId])
   @@index([borrowerId])
@@ -633,52 +774,459 @@ model Loan {
   @@map("loans")
 }
 
+model LoanProduct {
+  id                   String               @id @default(cuid())
+  code                 String               @db.VarChar(50)
+  version              Int
+  name                 String               @db.VarChar(150)
+  interestRatePercent  Int
+  maximumTermMonths    Int
+  supportedFrequencies RepaymentFrequency[]
+  effectiveFrom        DateTime
+  effectiveTo          DateTime?
+  isActive             Boolean              @default(true)
+  isSampleData         Boolean              @default(false)
+  loans                Loan[]
+  createdAt            DateTime             @default(now())
+  updatedAt            DateTime             @updatedAt
+
+  @@unique([code, version])
+  @@index([code, isActive])
+  @@map("loan_products")
+}
+
+model LoanApplicationEvent {
+  id           String   @id @default(cuid())
+  eventNumber  String   @unique @db.VarChar(60)
+  eventType    String   @db.VarChar(50)
+  fromStatus   String?  @db.VarChar(30)
+  toStatus     String   @db.VarChar(30)
+  reason       String   @db.VarChar(500)
+  occurredAt   DateTime @default(now())
+  isSampleData Boolean  @default(false)
+  loanId       String
+  actorUserId  String
+  loan         Loan     @relation(fields: [loanId], references: [id])
+  actor        User     @relation("LoanApplicationEventActor", fields: [actorUserId], references: [id])
+
+  @@index([loanId, occurredAt])
+  @@map("loan_application_events")
+}
+
+model LoanApplicationDocument {
+  id             String   @id @default(cuid())
+  documentNumber String   @unique @db.VarChar(80)
+  type           String   @db.VarChar(50)
+  reference      String   @db.VarChar(255)
+  status         String   @db.VarChar(30)
+  isPrivate      Boolean  @default(true)
+  isSampleData   Boolean  @default(false)
+  loanId         String
+  loan           Loan     @relation(fields: [loanId], references: [id])
+  createdAt      DateTime @default(now())
+
+  @@index([loanId, createdAt])
+  @@map("loan_application_documents")
+}
+
+model LoanTermsSnapshot {
+  id                    String                 @id @default(cuid())
+  snapshotNumber        String                 @unique @db.VarChar(80)
+  version               Int
+  principalPesewas      Int
+  contractualInterest   Int
+  totalRepayablePesewas Int
+  termMonths            Int
+  repaymentFrequency    RepaymentFrequency
+  businessPurpose       String                 @db.VarChar(500)
+  productCode           String                 @db.VarChar(50)
+  productVersion        Int
+  submittedAt           DateTime               @default(now())
+  isSampleData          Boolean                @default(false)
+  loanId                String
+  createdByUserId       String
+  loan                  Loan                   @relation(fields: [loanId], references: [id])
+  createdBy             User                   @relation("LoanTermsSnapshotMaker", fields: [createdByUserId], references: [id])
+  guaranteeSnapshot     LoanGuaranteeSnapshot?
+  decision              LoanDecision?
+
+  @@unique([loanId, version])
+  @@index([loanId, submittedAt])
+  @@map("loan_terms_snapshots")
+}
+
+model LoanGuaranteeSnapshot {
+  id                   String            @id @default(cuid())
+  snapshotNumber       String            @unique @db.VarChar(80)
+  version              Int
+  guarantorBorrowerIds String[]
+  agreementNumber      String            @db.VarChar(80)
+  agreementVersion     Int
+  capturedAt           DateTime          @default(now())
+  isSampleData         Boolean           @default(false)
+  loanId               String
+  termsSnapshotId      String            @unique
+  loan                 Loan              @relation(fields: [loanId], references: [id])
+  termsSnapshot        LoanTermsSnapshot @relation(fields: [termsSnapshotId], references: [id])
+  arrears              Arrear[]
+
+  @@unique([loanId, version])
+  @@index([loanId, capturedAt])
+  @@map("loan_guarantee_snapshots")
+}
+
+model LoanDecision {
+  id              String            @id @default(cuid())
+  decisionNumber  String            @unique @db.VarChar(80)
+  status          String            @db.VarChar(20)
+  reason          String            @db.VarChar(500)
+  decidedAt       DateTime          @default(now())
+  isSampleData    Boolean           @default(false)
+  loanId          String
+  termsSnapshotId String            @unique
+  decidedByUserId String
+  loan            Loan              @relation(fields: [loanId], references: [id])
+  termsSnapshot   LoanTermsSnapshot @relation(fields: [termsSnapshotId], references: [id])
+  decidedBy       User              @relation("LoanDecisionManager", fields: [decidedByUserId], references: [id])
+
+  @@index([loanId, decidedAt])
+  @@map("loan_decisions")
+}
+
 model Receipt {
-  id                        String        @id @default(cuid())
-  receiptNumber             String        @unique @db.VarChar(40)
+  id                        String                 @id @default(cuid())
+  receiptNumber             String                 @unique @db.VarChar(40)
   amountPesewas             Int
   principalAllocatedPesewas Int
   interestAllocatedPesewas  Int
   status                    ReceiptStatus
   receivedAt                DateTime
-  isSampleData              Boolean       @default(false)
+  idempotencyKey            String                 @unique @db.VarChar(100)
+  collectionNote            String?                @db.VarChar(500)
+  isSampleData              Boolean                @default(false)
   branchId                  String
   borrowerId                String
   loanId                    String
-  branch                    Branch        @relation(fields: [branchId], references: [id])
-  borrower                  Borrower      @relation(fields: [borrowerId], references: [id])
-  loan                      Loan          @relation(fields: [loanId], references: [id])
-  createdAt                 DateTime      @default(now())
-  updatedAt                 DateTime      @updatedAt
+  collectorUserId           String
+  paymentId                 String?                @unique
+  branch                    Branch                 @relation(fields: [branchId], references: [id])
+  borrower                  Borrower               @relation(fields: [borrowerId], references: [id])
+  loan                      Loan                   @relation(fields: [loanId], references: [id])
+  collector                 User                   @relation("ReceiptCollector", fields: [collectorUserId], references: [id])
+  payment                   Payment?               @relation(fields: [paymentId], references: [id])
+  handoverLinks             HandoverReceipt[]
+  reversalRequests          ReversalRequest[]
+  overpaymentLiabilities    OverpaymentLiability[]
+  createdAt                 DateTime               @default(now())
+  updatedAt                 DateTime               @updatedAt
 
   @@index([branchId])
   @@index([borrowerId])
   @@index([loanId])
+  @@index([collectorUserId, receivedAt])
   @@map("receipts")
 }
 
+model Assignment {
+  id               String    @id @default(cuid())
+  assignmentNumber String    @unique @db.VarChar(60)
+  collectionDate   DateTime  @db.Date
+  status           String    @default("ASSIGNED") @db.VarChar(30)
+  targetPesewas    Int
+  completedAt      DateTime?
+  isSampleData     Boolean   @default(false)
+  branchId         String
+  borrowerId       String
+  loanId           String
+  collectorUserId  String
+  branch           Branch    @relation(fields: [branchId], references: [id])
+  borrower         Borrower  @relation(fields: [borrowerId], references: [id])
+  loan             Loan      @relation(fields: [loanId], references: [id])
+  collector        User      @relation("AssignmentCollector", fields: [collectorUserId], references: [id])
+  payments         Payment[]
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@unique([loanId, collectionDate, collectorUserId])
+  @@index([branchId, collectionDate])
+  @@index([collectorUserId, collectionDate])
+  @@map("assignments")
+}
+
+model Payment {
+  id                        String                @id @default(cuid())
+  paymentNumber             String                @unique @db.VarChar(60)
+  idempotencyKey            String                @unique @db.VarChar(100)
+  amountPesewas             Int
+  principalAllocatedPesewas Int
+  interestAllocatedPesewas  Int
+  method                    PaymentMethod         @default(CASH)
+  submissionMode            PaymentSubmissionMode @default(ONLINE)
+  receivedAt                DateTime
+  status                    String                @default("CAPTURED") @db.VarChar(30)
+  isSampleData              Boolean               @default(false)
+  branchId                  String
+  borrowerId                String
+  loanId                    String
+  assignmentId              String
+  collectorUserId           String
+  branch                    Branch                @relation(fields: [branchId], references: [id])
+  borrower                  Borrower              @relation(fields: [borrowerId], references: [id])
+  loan                      Loan                  @relation(fields: [loanId], references: [id])
+  assignment                Assignment            @relation(fields: [assignmentId], references: [id])
+  collector                 User                  @relation("PaymentCollector", fields: [collectorUserId], references: [id])
+  allocations               PaymentAllocation[]
+  receipt                   Receipt?
+  custodyMovement           CustodyMovement?
+  createdAt                 DateTime              @default(now())
+
+  @@index([branchId, receivedAt])
+  @@index([loanId, receivedAt])
+  @@index([collectorUserId, receivedAt])
+  @@map("payments")
+}
+
+model PaymentAllocation {
+  id                        String              @id @default(cuid())
+  sequence                  Int
+  amountPesewas             Int
+  principalAllocatedPesewas Int
+  interestAllocatedPesewas  Int
+  paymentId                 String
+  instalmentId              String
+  payment                   Payment             @relation(fields: [paymentId], references: [id], onDelete: Restrict)
+  instalment                RepaymentInstalment @relation(fields: [instalmentId], references: [id], onDelete: Restrict)
+  createdAt                 DateTime            @default(now())
+
+  @@unique([paymentId, instalmentId])
+  @@index([instalmentId])
+  @@map("payment_allocations")
+}
+
+model CustodyMovement {
+  id                  String              @id @default(cuid())
+  movementNumber      String              @unique @db.VarChar(60)
+  type                CustodyMovementType
+  amountPesewas       Int
+  balanceAfterPesewas Int
+  occurredAt          DateTime            @default(now())
+  isSampleData        Boolean             @default(false)
+  branchId            String
+  collectorUserId     String
+  paymentId           String?             @unique
+  branch              Branch              @relation(fields: [branchId], references: [id])
+  collector           User                @relation("CustodyMovementCollector", fields: [collectorUserId], references: [id])
+  payment             Payment?            @relation(fields: [paymentId], references: [id], onDelete: Restrict)
+  createdAt           DateTime            @default(now())
+
+  @@index([collectorUserId, occurredAt])
+  @@index([branchId, occurredAt])
+  @@map("custody_movements")
+}
+
+model Handover {
+  id                 String              @id @default(cuid())
+  handoverNumber     String              @unique @db.VarChar(60)
+  status             HandoverStatus      @default(DRAFT)
+  expectedPesewas    Int
+  countedPesewas     Int?
+  variancePesewas    Int?
+  submittedAt        DateTime?
+  verifiedAt         DateTime?
+  postedAt           DateTime?
+  isSampleData       Boolean             @default(false)
+  branchId           String
+  collectorUserId    String
+  checkerUserId      String?
+  journalId          String?             @unique
+  branch             Branch              @relation(fields: [branchId], references: [id])
+  collector          User                @relation("HandoverCollector", fields: [collectorUserId], references: [id])
+  checker            User?               @relation("HandoverChecker", fields: [checkerUserId], references: [id])
+  journal            JournalEntry?       @relation(fields: [journalId], references: [id])
+  receipts           HandoverReceipt[]
+  denominationCounts DenominationCount[]
+  reconciliation     Reconciliation?
+  exceptions         CashException[]
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+
+  @@index([branchId, status])
+  @@index([collectorUserId, submittedAt])
+  @@map("handovers")
+}
+
+model HandoverReceipt {
+  id         String   @id @default(cuid())
+  active     Boolean  @default(true)
+  handoverId String
+  receiptId  String
+  handover   Handover @relation(fields: [handoverId], references: [id], onDelete: Restrict)
+  receipt    Receipt  @relation(fields: [receiptId], references: [id], onDelete: Restrict)
+  createdAt  DateTime @default(now())
+
+  @@unique([handoverId, receiptId])
+  @@index([receiptId, active])
+  @@map("handover_receipts")
+}
+
+model DenominationCount {
+  id                  String   @id @default(cuid())
+  denominationPesewas Int
+  quantity            Int
+  countedPesewas      Int
+  handoverId          String
+  handover            Handover @relation(fields: [handoverId], references: [id], onDelete: Restrict)
+  createdAt           DateTime @default(now())
+
+  @@unique([handoverId, denominationPesewas])
+  @@map("denomination_counts")
+}
+
+model Reconciliation {
+  id                   String               @id @default(cuid())
+  reconciliationNumber String               @unique @db.VarChar(60)
+  status               ReconciliationStatus
+  expectedPesewas      Int
+  countedPesewas       Int
+  variancePesewas      Int
+  note                 String               @db.VarChar(500)
+  checkedAt            DateTime             @default(now())
+  handoverId           String               @unique
+  checkerUserId        String
+  handover             Handover             @relation(fields: [handoverId], references: [id], onDelete: Restrict)
+  checker              User                 @relation("ReconciliationChecker", fields: [checkerUserId], references: [id])
+  createdAt            DateTime             @default(now())
+
+  @@index([checkerUserId, checkedAt])
+  @@map("reconciliations")
+}
+
+model CashException {
+  id              String              @id @default(cuid())
+  exceptionNumber String              @unique @db.VarChar(60)
+  type            CashExceptionType
+  status          CashExceptionStatus @default(OPEN)
+  amountPesewas   Int
+  notes           String              @db.VarChar(500)
+  resolvedAt      DateTime?
+  handoverId      String
+  handover        Handover            @relation(fields: [handoverId], references: [id], onDelete: Restrict)
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+
+  @@index([handoverId, status])
+  @@index([type, status])
+  @@map("cash_exceptions")
+}
+
 model Arrear {
-  id                  String       @id @default(cuid())
-  assessmentNumber    String       @unique @db.VarChar(40)
+  id                  String                 @id @default(cuid())
+  assessmentNumber    String                 @unique @db.VarChar(40)
   effectiveDueDate    DateTime
   daysPastDue         Int
   unpaidAmountPesewas Int
   contributionPesewas Int
   status              ArrearStatus
-  isSampleData        Boolean      @default(false)
+  assessedAt          DateTime               @default(now())
+  isSampleData        Boolean                @default(false)
   loanId              String
   borrowerId          String
   guarantorBorrowerId String?
-  loan                Loan         @relation(fields: [loanId], references: [id])
-  borrower            Borrower     @relation(fields: [borrowerId], references: [id])
-  guarantor           Borrower?    @relation("ArrearGuarantor", fields: [guarantorBorrowerId], references: [id])
-  createdAt           DateTime     @default(now())
-  updatedAt           DateTime     @updatedAt
+  instalmentId        String?                @unique
+  guaranteeSnapshotId String?
+  createdByUserId     String?
+  loan                Loan                   @relation(fields: [loanId], references: [id])
+  borrower            Borrower               @relation(fields: [borrowerId], references: [id])
+  guarantor           Borrower?              @relation("ArrearGuarantor", fields: [guarantorBorrowerId], references: [id])
+  instalment          RepaymentInstalment?   @relation(fields: [instalmentId], references: [id])
+  guaranteeSnapshot   LoanGuaranteeSnapshot? @relation(fields: [guaranteeSnapshotId], references: [id])
+  createdBy           User?                  @relation("ArrearAssessmentCreator", fields: [createdByUserId], references: [id])
+  notices             ArrearNotice[]
+  contributions       ArrearContribution[]
+  disputes            ArrearDispute[]
+  decisions           ArrearDecision[]
+  createdAt           DateTime               @default(now())
+  updatedAt           DateTime               @updatedAt
 
   @@index([loanId])
   @@index([borrowerId])
   @@index([guarantorBorrowerId])
   @@map("arrears")
+}
+
+model ArrearNotice {
+  id                String    @id @default(cuid())
+  noticeNumber      String    @unique @db.VarChar(60)
+  noticeType        String    @db.VarChar(40)
+  documentReference String    @db.VarChar(255)
+  servedAt          DateTime
+  acknowledgedAt    DateTime?
+  arrearId          String
+  arrear            Arrear    @relation(fields: [arrearId], references: [id], onDelete: Restrict)
+  createdAt         DateTime  @default(now())
+
+  @@index([arrearId, servedAt])
+  @@map("arrear_notices")
+}
+
+model ArrearContribution {
+  id                  String                   @id @default(cuid())
+  contributionNumber  String                   @unique @db.VarChar(70)
+  sequence            Int
+  assessedPesewas     Int
+  collectedPesewas    Int                      @default(0)
+  status              ArrearContributionStatus @default(PENDING_APPROVAL)
+  collectedAt         DateTime?
+  arrearId            String
+  guarantorBorrowerId String
+  collectedByUserId   String?
+  journalId           String?                  @unique
+  arrear              Arrear                   @relation(fields: [arrearId], references: [id], onDelete: Restrict)
+  guarantor           Borrower                 @relation("ArrearContributionGuarantor", fields: [guarantorBorrowerId], references: [id])
+  collectedBy         User?                    @relation("ArrearContributionCollector", fields: [collectedByUserId], references: [id])
+  journal             JournalEntry?            @relation(fields: [journalId], references: [id])
+  createdAt           DateTime                 @default(now())
+  updatedAt           DateTime                 @updatedAt
+
+  @@unique([arrearId, guarantorBorrowerId])
+  @@index([guarantorBorrowerId, status])
+  @@map("arrear_contributions")
+}
+
+model ArrearDispute {
+  id               String              @id @default(cuid())
+  disputeNumber    String              @unique @db.VarChar(60)
+  complaint        String              @db.VarChar(1000)
+  status           ArrearDisputeStatus @default(OPEN)
+  resolution       String?             @db.VarChar(1000)
+  recordedAt       DateTime            @default(now())
+  resolvedAt       DateTime?
+  arrearId         String
+  recordedByUserId String
+  resolvedByUserId String?
+  arrear           Arrear              @relation(fields: [arrearId], references: [id], onDelete: Restrict)
+  recordedBy       User                @relation("ArrearDisputeRecorder", fields: [recordedByUserId], references: [id])
+  resolvedBy       User?               @relation("ArrearDisputeResolver", fields: [resolvedByUserId], references: [id])
+  createdAt        DateTime            @default(now())
+
+  @@index([arrearId, status])
+  @@map("arrear_disputes")
+}
+
+model ArrearDecision {
+  id              String               @id @default(cuid())
+  decisionNumber  String               @unique @db.VarChar(60)
+  status          ArrearDecisionStatus
+  reason          String               @db.VarChar(500)
+  decidedAt       DateTime             @default(now())
+  arrearId        String
+  decidedByUserId String
+  arrear          Arrear               @relation(fields: [arrearId], references: [id], onDelete: Restrict)
+  decidedBy       User                 @relation("ArrearDecisionManager", fields: [decidedByUserId], references: [id])
+  createdAt       DateTime             @default(now())
+
+  @@index([arrearId, decidedAt])
+  @@map("arrear_decisions")
 }
 
 model LedgerAccount {
@@ -695,22 +1243,199 @@ model LedgerAccount {
   @@map("ledger_accounts")
 }
 
+model AccountingPeriod {
+  id                String                   @id @default(cuid())
+  periodKey         String                   @unique @db.VarChar(30)
+  name              String                   @db.VarChar(80)
+  startsAt          DateTime
+  endsAt            DateTime
+  status            String                   @db.VarChar(20)
+  closedAt          DateTime?
+  isSampleData      Boolean                  @default(false)
+  branchId          String
+  branch            Branch                   @relation(fields: [branchId], references: [id])
+  journals          JournalEntry[]
+  reopeningRequests PeriodReopeningRequest[]
+  createdAt         DateTime                 @default(now())
+  updatedAt         DateTime                 @updatedAt
+
+  @@unique([branchId, startsAt])
+  @@index([branchId, status])
+  @@map("accounting_periods")
+}
+
+model PeriodReopeningRequest {
+  id                String               @id @default(cuid())
+  requestNumber     String               @unique @db.VarChar(60)
+  reason            String               @db.VarChar(500)
+  status            ControlRequestStatus @default(PENDING)
+  requestedAt       DateTime             @default(now())
+  decidedAt         DateTime?
+  decisionReason    String?              @db.VarChar(500)
+  periodId          String
+  branchId          String
+  requestedByUserId String
+  decidedByUserId   String?
+  period            AccountingPeriod     @relation(fields: [periodId], references: [id], onDelete: Restrict)
+  branch            Branch               @relation(fields: [branchId], references: [id])
+  requestedBy       User                 @relation("PeriodReopenRequester", fields: [requestedByUserId], references: [id])
+  decidedBy         User?                @relation("PeriodReopenChecker", fields: [decidedByUserId], references: [id])
+
+  @@index([branchId, status, requestedAt])
+  @@index([periodId, status])
+  @@map("period_reopening_requests")
+}
+
 model JournalEntry {
-  id              String        @id @default(cuid())
-  journalNumber   String        @unique @db.VarChar(40)
-  description     String        @db.VarChar(300)
-  sourceEventType String        @db.VarChar(80)
-  sourceReference String        @unique @db.VarChar(80)
-  entryDate       DateTime
-  status          JournalStatus @default(POSTED)
-  isSampleData    Boolean       @default(false)
-  branchId        String
-  branch          Branch        @relation(fields: [branchId], references: [id])
-  lines           JournalLine[]
-  createdAt       DateTime      @default(now())
+  id                 String                @id @default(cuid())
+  journalNumber      String                @unique @db.VarChar(40)
+  description        String                @db.VarChar(300)
+  sourceEventType    String                @db.VarChar(80)
+  sourceReference    String                @unique @db.VarChar(80)
+  entryDate          DateTime
+  status             JournalStatus         @default(POSTED)
+  isSampleData       Boolean               @default(false)
+  branchId           String
+  periodId           String
+  actorUserId        String
+  branch             Branch                @relation(fields: [branchId], references: [id])
+  period             AccountingPeriod      @relation(fields: [periodId], references: [id])
+  actor              User                  @relation("JournalActor", fields: [actorUserId], references: [id])
+  lines              JournalLine[]
+  originalReversal   Reversal?             @relation("OriginalJournal")
+  reversingFor       Reversal?             @relation("ReversingJournal")
+  replacementFor     Reversal?             @relation("ReplacementJournal")
+  reversalRequests   ReversalRequest[]     @relation("RequestedJournal")
+  suspenseOrigin     SuspenseItem?         @relation("SuspenseOriginJournal")
+  suspenseResolution SuspenseItem?         @relation("SuspenseResolutionJournal")
+  overpaymentOrigin  OverpaymentLiability? @relation("OverpaymentOriginJournal")
+  refundJournal      RefundRequest?        @relation("RefundJournal")
+  disbursement       Disbursement?
+  handover           Handover?
+  arrearContribution ArrearContribution?
+  createdAt          DateTime              @default(now())
 
   @@index([branchId])
+  @@index([periodId, entryDate])
+  @@index([actorUserId, entryDate])
   @@map("journal_entries")
+}
+
+model Reversal {
+  id                   String           @id @default(cuid())
+  reversalNumber       String           @unique @db.VarChar(50)
+  reason               String           @db.VarChar(500)
+  reversedAt           DateTime         @default(now())
+  isSampleData         Boolean          @default(false)
+  originalJournalId    String           @unique
+  reversingJournalId   String           @unique
+  replacementJournalId String?          @unique
+  authorizedByUserId   String
+  originalJournal      JournalEntry     @relation("OriginalJournal", fields: [originalJournalId], references: [id])
+  reversingJournal     JournalEntry     @relation("ReversingJournal", fields: [reversingJournalId], references: [id])
+  replacementJournal   JournalEntry?    @relation("ReplacementJournal", fields: [replacementJournalId], references: [id])
+  authorizedBy         User             @relation("ReversalAuthorizer", fields: [authorizedByUserId], references: [id])
+  request              ReversalRequest?
+  createdAt            DateTime         @default(now())
+
+  @@index([authorizedByUserId, reversedAt])
+  @@map("reversals")
+}
+
+model ReversalRequest {
+  id                String               @id @default(cuid())
+  requestNumber     String               @unique @db.VarChar(60)
+  reason            String               @db.VarChar(500)
+  status            ControlRequestStatus @default(PENDING)
+  requestedAt       DateTime             @default(now())
+  decidedAt         DateTime?
+  decisionReason    String?              @db.VarChar(500)
+  replacementData   Json?
+  isSampleData      Boolean              @default(false)
+  branchId          String
+  originalJournalId String
+  receiptId         String?
+  requestedByUserId String
+  decidedByUserId   String?
+  reversalId        String?              @unique
+  branch            Branch               @relation(fields: [branchId], references: [id])
+  originalJournal   JournalEntry         @relation("RequestedJournal", fields: [originalJournalId], references: [id], onDelete: Restrict)
+  receipt           Receipt?             @relation(fields: [receiptId], references: [id], onDelete: Restrict)
+  requestedBy       User                 @relation("ReversalRequester", fields: [requestedByUserId], references: [id])
+  decidedBy         User?                @relation("ReversalRequestChecker", fields: [decidedByUserId], references: [id])
+  reversal          Reversal?            @relation(fields: [reversalId], references: [id], onDelete: Restrict)
+
+  @@index([branchId, status, requestedAt])
+  @@index([originalJournalId, status])
+  @@map("reversal_requests")
+}
+
+model SuspenseItem {
+  id                  String               @id @default(cuid())
+  suspenseNumber      String               @unique @db.VarChar(60)
+  sourceReference     String               @unique @db.VarChar(80)
+  amountPesewas       Int
+  payerName           String?              @db.VarChar(150)
+  status              ControlRequestStatus @default(PENDING)
+  resolutionNote      String?              @db.VarChar(500)
+  createdAt           DateTime             @default(now())
+  resolvedAt          DateTime?
+  isSampleData        Boolean              @default(false)
+  branchId            String
+  originJournalId     String               @unique
+  resolutionJournalId String?              @unique
+  resolvedByUserId    String?
+  branch              Branch               @relation(fields: [branchId], references: [id])
+  originJournal       JournalEntry         @relation("SuspenseOriginJournal", fields: [originJournalId], references: [id], onDelete: Restrict)
+  resolutionJournal   JournalEntry?        @relation("SuspenseResolutionJournal", fields: [resolutionJournalId], references: [id], onDelete: Restrict)
+  resolvedBy          User?                @relation("SuspenseResolver", fields: [resolvedByUserId], references: [id])
+
+  @@index([branchId, status, createdAt])
+  @@map("suspense_items")
+}
+
+model OverpaymentLiability {
+  id              String          @id @default(cuid())
+  liabilityNumber String          @unique @db.VarChar(60)
+  payerName       String          @db.VarChar(150)
+  payerReference  String          @db.VarChar(100)
+  amountPesewas   Int
+  refundedPesewas Int             @default(0)
+  createdAt       DateTime        @default(now())
+  isSampleData    Boolean         @default(false)
+  branchId        String
+  receiptId       String?
+  originJournalId String          @unique
+  branch          Branch          @relation(fields: [branchId], references: [id])
+  receipt         Receipt?        @relation(fields: [receiptId], references: [id], onDelete: Restrict)
+  originJournal   JournalEntry    @relation("OverpaymentOriginJournal", fields: [originJournalId], references: [id], onDelete: Restrict)
+  refundRequests  RefundRequest[]
+
+  @@index([branchId, createdAt])
+  @@map("overpayment_liabilities")
+}
+
+model RefundRequest {
+  id                String               @id @default(cuid())
+  requestNumber     String               @unique @db.VarChar(60)
+  amountPesewas     Int
+  payerVerified     Boolean              @default(false)
+  reason            String               @db.VarChar(500)
+  status            ControlRequestStatus @default(PENDING)
+  requestedAt       DateTime             @default(now())
+  decidedAt         DateTime?
+  decisionReason    String?              @db.VarChar(500)
+  requestedByUserId String
+  decidedByUserId   String?
+  liabilityId       String
+  refundJournalId   String?              @unique
+  requestedBy       User                 @relation("RefundRequester", fields: [requestedByUserId], references: [id])
+  decidedBy         User?                @relation("RefundChecker", fields: [decidedByUserId], references: [id])
+  liability         OverpaymentLiability @relation(fields: [liabilityId], references: [id], onDelete: Restrict)
+  refundJournal     JournalEntry?        @relation("RefundJournal", fields: [refundJournalId], references: [id], onDelete: Restrict)
+
+  @@index([liabilityId, status])
+  @@map("refund_requests")
 }
 
 model JournalLine {
@@ -720,13 +1445,195 @@ model JournalLine {
   isSampleData  Boolean       @default(false)
   journalId     String
   accountId     String
-  journal       JournalEntry  @relation(fields: [journalId], references: [id], onDelete: Cascade)
+  journal       JournalEntry  @relation(fields: [journalId], references: [id], onDelete: Restrict)
   account       LedgerAccount @relation(fields: [accountId], references: [id])
   createdAt     DateTime      @default(now())
 
   @@index([journalId])
   @@index([accountId])
   @@map("journal_lines")
+}
+
+model FundAccount {
+  id                 String         @id @default(cuid())
+  accountNumber      String         @unique @db.VarChar(50)
+  name               String         @db.VarChar(150)
+  sourceType         FundSourceType
+  eligibleForFunding Boolean        @default(false)
+  exclusionReason    String?        @db.VarChar(300)
+  isActive           Boolean        @default(true)
+  isSampleData       Boolean        @default(false)
+  branchId           String
+  branch             Branch         @relation(fields: [branchId], references: [id])
+  lots               FundLot[]
+  createdAt          DateTime       @default(now())
+  updatedAt          DateTime       @updatedAt
+
+  @@index([branchId, eligibleForFunding])
+  @@index([sourceType])
+  @@map("fund_accounts")
+}
+
+model FundLot {
+  id                String               @id @default(cuid())
+  lotNumber         String               @unique @db.VarChar(50)
+  description       String               @db.VarChar(300)
+  evidenceReference String               @db.VarChar(120)
+  receivedAt        DateTime
+  verifiedAt        DateTime?
+  originalPesewas   Int
+  availablePesewas  Int
+  reservedPesewas   Int                  @default(0)
+  committedPesewas  Int                  @default(0)
+  disbursedPesewas  Int                  @default(0)
+  recoveredPesewas  Int                  @default(0)
+  status            FundLotStatus        @default(AVAILABLE)
+  isSampleData      Boolean              @default(false)
+  fundAccountId     String
+  fundAccount       FundAccount          @relation(fields: [fundAccountId], references: [id])
+  movements         FundMovement[]
+  reservations      FundingReservation[]
+  allocations       FundAllocation[]
+  createdAt         DateTime             @default(now())
+  updatedAt         DateTime             @updatedAt
+
+  @@index([fundAccountId, status])
+  @@map("fund_lots")
+}
+
+model FundMovement {
+  id                     String        @id @default(cuid())
+  movementNumber         String        @unique @db.VarChar(60)
+  movementType           FundLotStatus
+  sourceReference        String        @unique @db.VarChar(100)
+  amountPesewas          Int
+  principalAmountPesewas Int           @default(0)
+  interestAmountPesewas  Int           @default(0)
+  notes                  String        @db.VarChar(500)
+  occurredAt             DateTime      @default(now())
+  isSampleData           Boolean       @default(false)
+  fundLotId              String
+  actorUserId            String
+  fundLot                FundLot       @relation(fields: [fundLotId], references: [id])
+  actor                  User          @relation("FundMovementActor", fields: [actorUserId], references: [id])
+  createdAt              DateTime      @default(now())
+
+  @@index([fundLotId, occurredAt])
+  @@index([actorUserId, occurredAt])
+  @@map("fund_movements")
+}
+
+model FundingReservation {
+  id                String           @id @default(cuid())
+  reservationNumber String           @unique @db.VarChar(60)
+  amountPesewas     Int
+  status            FundLotStatus    @default(RESERVED)
+  reservedAt        DateTime         @default(now())
+  committedAt       DateTime?
+  cancelledAt       DateTime?
+  isSampleData      Boolean          @default(false)
+  fundLotId         String
+  loanId            String?
+  fundLot           FundLot          @relation(fields: [fundLotId], references: [id])
+  loan              Loan?            @relation(fields: [loanId], references: [id])
+  allocations       FundAllocation[]
+  disbursement      Disbursement?
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+
+  @@index([fundLotId, status])
+  @@index([loanId, status])
+  @@map("funding_reservations")
+}
+
+model FundAllocation {
+  id                        String              @id @default(cuid())
+  allocationNumber          String              @unique @db.VarChar(60)
+  amountPesewas             Int
+  recoveredPrincipalPesewas Int                 @default(0)
+  recoveredInterestPesewas  Int                 @default(0)
+  status                    FundLotStatus       @default(COMMITTED)
+  allocatedAt               DateTime            @default(now())
+  disbursedAt               DateTime?
+  recoveredAt               DateTime?
+  isSampleData              Boolean             @default(false)
+  fundLotId                 String
+  loanId                    String
+  reservationId             String?
+  fundLot                   FundLot             @relation(fields: [fundLotId], references: [id])
+  loan                      Loan                @relation(fields: [loanId], references: [id])
+  reservation               FundingReservation? @relation(fields: [reservationId], references: [id])
+  createdAt                 DateTime            @default(now())
+  updatedAt                 DateTime            @updatedAt
+
+  @@index([fundLotId, status])
+  @@index([loanId, status])
+  @@map("fund_allocations")
+}
+
+model Disbursement {
+  id                   String             @id @default(cuid())
+  disbursementNumber   String             @unique @db.VarChar(60)
+  idempotencyKey       String             @unique @db.VarChar(100)
+  amountPesewas        Int
+  beneficiaryName      String             @db.VarChar(150)
+  beneficiaryIdentity  String             @db.VarChar(30)
+  identityConfirmed    Boolean            @default(false)
+  contractReference    String             @db.VarChar(120)
+  managerAuthorization String             @db.VarChar(120)
+  actualCashOutAt      DateTime
+  status               String             @default("POSTED") @db.VarChar(30)
+  isSampleData         Boolean            @default(false)
+  loanId               String             @unique
+  reservationId        String             @unique
+  journalId            String             @unique
+  preparedByUserId     String
+  authorizedByUserId   String
+  loan                 Loan               @relation(fields: [loanId], references: [id])
+  reservation          FundingReservation @relation(fields: [reservationId], references: [id])
+  journal              JournalEntry       @relation(fields: [journalId], references: [id])
+  preparedBy           User               @relation("DisbursementPreparer", fields: [preparedByUserId], references: [id])
+  authorizedBy         User               @relation("DisbursementAuthorizer", fields: [authorizedByUserId], references: [id])
+  voucher              CashVoucher?
+  createdAt            DateTime           @default(now())
+
+  @@index([actualCashOutAt])
+  @@map("disbursements")
+}
+
+model CashVoucher {
+  id                String       @id @default(cuid())
+  voucherNumber     String       @unique @db.VarChar(60)
+  documentReference String       @db.VarChar(255)
+  signedAt          DateTime
+  isSampleData      Boolean      @default(false)
+  disbursementId    String       @unique
+  disbursement      Disbursement @relation(fields: [disbursementId], references: [id])
+  createdAt         DateTime     @default(now())
+
+  @@map("cash_vouchers")
+}
+
+model RepaymentInstalment {
+  id                      String              @id @default(cuid())
+  instalmentNumber        Int
+  principalPesewas        Int
+  interestPesewas         Int
+  totalPesewas            Int
+  contractualDueDate      DateTime
+  effectiveCollectionDate DateTime
+  status                  String              @default("AWAITING") @db.VarChar(30)
+  principalPaidPesewas    Int                 @default(0)
+  interestPaidPesewas     Int                 @default(0)
+  loanId                  String
+  loan                    Loan                @relation(fields: [loanId], references: [id])
+  paymentAllocations      PaymentAllocation[]
+  arrear                  Arrear?
+  createdAt               DateTime            @default(now())
+
+  @@unique([loanId, instalmentNumber])
+  @@index([effectiveCollectionDate, status])
+  @@map("repayment_instalments")
 }
 
 model AuditEvent {

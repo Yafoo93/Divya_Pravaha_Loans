@@ -1,29 +1,44 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useRef, useState, type FormEvent } from "react";
+import { useRouter } from "next/navigation";
 import {
   allocateCashPayment,
   validateCashCollection,
   type CashCollectionValues,
 } from "@/lib/cash-collection";
-import { formatGhsFromPesewas, toAccraDateInputValue } from "@/lib/formatters";
-import { prototypeWorkspace } from "@/lib/workspace-context";
+import { formatGhsFromPesewas } from "@/lib/formatters";
 import { Alert, Button } from "./ui/actions";
 import { CheckboxField, InputField, TextareaField } from "./ui/forms";
 
-const initialValues: CashCollectionValues = {
-  amount: "",
-  receivedDate: toAccraDateInputValue(prototypeWorkspace.displayDate),
-  borrowerConfirmed: false,
-};
-
-export function MobileCashForm() {
-  const [values, setValues] = useState(initialValues);
+export function MobileCashForm({
+  loan,
+  receivedDate,
+}: {
+  loan: {
+    id: string;
+    number: string;
+    borrowerName: string;
+    customerId: string;
+    groupName: string;
+    duePesewas: number;
+    balancePesewas: number;
+  };
+  receivedDate: string;
+}) {
+  const router = useRouter();
+  const requestKey = useRef(crypto.randomUUID());
+  const [values, setValues] = useState<CashCollectionValues>({
+    amount: "",
+    receivedDate,
+    borrowerConfirmed: false,
+  });
   const [note, setNote] = useState("");
   const [errors, setErrors] = useState<
     ReturnType<typeof validateCashCollection>
   >({});
-  const [validated, setValidated] = useState(false);
+  const [working, setWorking] = useState(false);
+  const [serverError, setServerError] = useState("");
   const allocation = allocateCashPayment(Number(values.amount) || 0);
 
   function update<K extends keyof CashCollectionValues>(
@@ -36,14 +51,41 @@ export function MobileCashForm() {
       delete next[field];
       return next;
     });
-    setValidated(false);
+    setServerError("");
   }
 
-  function submit(event: FormEvent<HTMLFormElement>) {
+  async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const nextErrors = validateCashCollection(values);
     setErrors(nextErrors);
-    setValidated(Object.keys(nextErrors).length === 0);
+    if (Object.keys(nextErrors).length > 0) return;
+    if (!navigator.onLine) {
+      setServerError("An online connection is required to issue a receipt.");
+      return;
+    }
+    setWorking(true);
+    setServerError("");
+    const response = await fetch("/api/field/receipts", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        loanId: loan.id,
+        amount: values.amount,
+        receivedDate: values.receivedDate,
+        borrowerConfirmed: values.borrowerConfirmed,
+        collectionNote: note,
+        idempotencyKey: requestKey.current,
+        paymentMethod: "CASH",
+        submissionMode: "ONLINE",
+      }),
+    });
+    const result = (await response.json()) as { id?: string; error?: string };
+    if (!response.ok || !result.id) {
+      setServerError(result.error ?? "Receipt capture failed.");
+      setWorking(false);
+      return;
+    }
+    router.push(`/field/receipts/${result.id}`);
   }
 
   return (
@@ -52,18 +94,22 @@ export function MobileCashForm() {
         <span className="bg-success/10 text-success inline-flex rounded-full px-2.5 py-1 text-[10px] font-bold uppercase">
           Borrower and loan confirmed
         </span>
-        <h2 className="mt-3 text-xl font-bold">Efua Osei</h2>
+        <h2 className="mt-3 text-xl font-bold">{loan.borrowerName}</h2>
         <p className="text-muted mt-1 text-xs">
-          CUS-0129 · LN-0246 · Kasoa Market Circle
+          {loan.customerId} · {loan.number} · {loan.groupName}
         </p>
         <dl className="border-border mt-4 grid grid-cols-2 gap-3 border-t pt-4 text-sm">
           <div>
             <dt className="text-muted text-xs">Due today</dt>
-            <dd className="mt-1 font-bold">GHS 600.00</dd>
+            <dd className="mt-1 font-bold">
+              {formatGhsFromPesewas(loan.duePesewas)}
+            </dd>
           </div>
           <div>
             <dt className="text-muted text-xs">Contract balance</dt>
-            <dd className="mt-1 text-right font-bold">GHS 3,600.00</dd>
+            <dd className="mt-1 text-right font-bold">
+              {formatGhsFromPesewas(loan.balancePesewas)}
+            </dd>
           </div>
         </dl>
       </section>
@@ -169,14 +215,17 @@ export function MobileCashForm() {
           Correct the highlighted fields before continuing.
         </Alert>
       )}
-      {validated && (
-        <Alert title="Cash form validated" variant="success">
-          The sample is ready for online receipt issuance. No payment was
-          recorded.
+      {serverError && (
+        <Alert title="Receipt not issued" variant="danger">
+          {serverError}
         </Alert>
       )}
-      <Button type="submit" className="min-h-14 w-full text-base">
-        Validate and preview receipt
+      <Button
+        type="submit"
+        disabled={working}
+        className="min-h-14 w-full text-base"
+      >
+        {working ? "Issuing numbered receipt..." : "Issue numbered receipt"}
       </Button>
     </form>
   );

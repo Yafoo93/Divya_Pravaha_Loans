@@ -44,9 +44,38 @@
 
 body {
   margin: 0;
+  min-width: 320px;
+  max-width: 100%;
+  overflow-x: hidden;
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-geist-sans), Arial, sans-serif;
+}
+
+img,
+svg,
+video {
+  max-width: 100%;
+}
+
+.workspace-shell,
+.workspace-shell > div,
+.workspace-shell main,
+.workspace-shell section,
+.workspace-shell article {
+  min-width: 0;
+}
+
+.workspace-shell .overflow-x-auto {
+  overscroll-behavior-inline: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+@media (max-width: 639px) {
+  .workspace-shell main {
+    padding-right: 1rem;
+    padding-left: 1rem;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

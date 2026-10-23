@@ -32,7 +32,7 @@ export function Button({
     <button
       {...props}
       disabled={disabled || loading}
-      className={`focus-visible:ring-primary/25 inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border px-4 py-2 text-sm font-bold transition focus-visible:ring-4 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50 ${buttonStyles[variant]} ${className}`}
+      className={`focus-visible:ring-primary/25 inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border px-4 py-2 text-sm font-bold transition focus-visible:ring-4 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50 ${buttonStyles[variant]} ${className}`}
     >
       {loading && (
         <span
@@ -146,7 +146,7 @@ export function Dialog({
   const descriptionId = "prototype-dialog-description";
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 p-4"
+      className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/45 p-0 sm:items-center sm:p-4"
       onMouseDown={(event) => {
         if (event.target === event.currentTarget) onClose();
       }}
@@ -159,7 +159,7 @@ export function Dialog({
         aria-modal="true"
         aria-labelledby={titleId}
         aria-describedby={description ? descriptionId : undefined}
-        className="border-border bg-surface w-full max-w-lg rounded-2xl border p-6 shadow-2xl"
+        className="border-border bg-surface max-h-[92dvh] w-full max-w-lg overflow-y-auto rounded-t-2xl border p-4 shadow-2xl sm:rounded-2xl sm:p-6"
       >
         <div className="flex items-start justify-between gap-4">
           <div>
@@ -206,13 +206,18 @@ export function ConfirmationDialog({
 }) {
   return (
     <Dialog open={open} title={title} description={message} onClose={onCancel}>
-      <div className="flex justify-end gap-3">
-        <Button variant="secondary" onClick={onCancel}>
+      <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+        <Button
+          variant="secondary"
+          onClick={onCancel}
+          className="w-full sm:w-auto"
+        >
           Cancel
         </Button>
         <Button
           variant={destructive ? "danger" : "primary"}
           onClick={onConfirm}
+          className="w-full sm:w-auto"
         >
           {confirmLabel}
         </Button>

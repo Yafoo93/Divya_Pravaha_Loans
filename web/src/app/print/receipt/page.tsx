@@ -24,7 +24,7 @@ export default function PrintableReceiptPage() {
             reference="RCT-20261016-0057"
             date="16 Oct 2026 · 14:40 GMT"
           >
-            <dl className="grid grid-cols-2 gap-5">
+            <dl className="grid gap-5 sm:grid-cols-2">
               <DocumentField label="Received from" value="Abena Boateng" />
               <DocumentField label="Loan" value="LN-0204" />
               <DocumentField label="Group" value="Kasoa Market Circle" />

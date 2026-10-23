@@ -31,7 +31,9 @@ export function assertIndependentChecker(
   checkerUserId: string,
 ): void {
   if (!makerUserId || !checkerUserId) {
-    throw new MakerCheckerViolation("Maker and checker identities are required.");
+    throw new MakerCheckerViolation(
+      "Maker and checker identities are required.",
+    );
   }
   if (makerUserId === checkerUserId) throw new MakerCheckerViolation();
 }

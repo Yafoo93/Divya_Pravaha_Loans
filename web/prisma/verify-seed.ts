@@ -29,6 +29,10 @@ async function main() {
     documentAccessEvents,
     restrictions,
     reactivationDecisions,
+    loanProducts,
+    termsSnapshots,
+    guaranteeSnapshots,
+    accountingPeriods,
   ] = await Promise.all([
     db.branch.count({ where: { code: "KASOA-MARKET", isSampleData: true } }),
     db.role.findMany(),
@@ -64,6 +68,10 @@ async function main() {
     db.documentAccessEvent.findMany(),
     db.borrowerRestriction.findMany({ where: { isSampleData: true } }),
     db.reactivationDecision.findMany({ where: { isSampleData: true } }),
+    db.loanProduct.findMany({ where: { code: "GROUP_FLAT_20" } }),
+    db.loanTermsSnapshot.findMany({ where: { isSampleData: true } }),
+    db.loanGuaranteeSnapshot.findMany({ where: { isSampleData: true } }),
+    db.accountingPeriod.findMany({ where: { isSampleData: true } }),
   ]);
 
   assert.equal(branches, 1, "Expected the Kasoa Market sample branch");
@@ -184,6 +192,36 @@ async function main() {
   );
   assert.ok(loans.length >= 2, "Expected sample loans");
   assert.ok(
+    loanProducts.some(
+      (product) =>
+        product.version === 1 &&
+        product.interestRatePercent === 20 &&
+        product.maximumTermMonths === 6 &&
+        product.supportedFrequencies.length === 3 &&
+        product.isActive,
+    ),
+    "Expected active GROUP_FLAT_20 v1 product configuration",
+  );
+  assert.ok(
+    termsSnapshots.some(
+      (snapshot) =>
+        snapshot.version === 1 &&
+        snapshot.productCode === "GROUP_FLAT_20" &&
+        snapshot.totalRepayablePesewas ===
+          snapshot.principalPesewas + snapshot.contractualInterest,
+    ),
+    "Expected a reconciled frozen submitted-terms snapshot",
+  );
+  assert.ok(
+    guaranteeSnapshots.some(
+      (snapshot) =>
+        snapshot.version === 1 &&
+        snapshot.agreementVersion > 0 &&
+        snapshot.guarantorBorrowerIds.length >= 4,
+    ),
+    "Expected frozen guarantors and agreement version",
+  );
+  assert.ok(
     loans.every((record) => record.isSampleData),
     "Every seeded loan must be marked as sample data",
   );
@@ -213,6 +251,26 @@ async function main() {
   );
   assert.ok(journals.length >= 3, "Expected sample journals");
   assert.ok(
+    [
+      "1000",
+      "1010",
+      "1100",
+      "1110",
+      "1200",
+      "2000",
+      "2010",
+      "3000",
+      "4000",
+      "5000",
+    ].every((code) => accounts.some((account) => account.code === code)),
+    "Expected the provisional chart of accounts",
+  );
+  assert.ok(
+    accountingPeriods.some((period) => period.status === "OPEN") &&
+      accountingPeriods.some((period) => period.status === "CLOSED"),
+    "Expected open and closed accounting periods",
+  );
+  assert.ok(
     accounts.every((record) => record.isSampleData),
     "Every seeded ledger account must be marked as sample data",
   );
@@ -230,10 +288,226 @@ async function main() {
       0,
     );
     assert.equal(debit, credit, `${journal.journalNumber} is not balanced`);
+    assert.ok(
+      journal.actorUserId &&
+        journal.periodId &&
+        journal.sourceEventType &&
+        journal.sourceReference,
+      `${journal.journalNumber} must link its actor, period, and source event`,
+    );
+    assert.ok(
+      journal.lines.every(
+        (line) =>
+          Number.isSafeInteger(line.debitPesewas) &&
+          Number.isSafeInteger(line.creditPesewas),
+      ),
+      `${journal.journalNumber} must store integer pesewas`,
+    );
   }
 
+  const protectedJournal = journals[0];
+  let editBlocked = false;
+  try {
+    await db.journalEntry.update({
+      where: { id: protectedJournal.id },
+      data: { description: "Forbidden posted-journal edit" },
+    });
+  } catch {
+    editBlocked = true;
+  }
+  assert.ok(editBlocked, "The database must block posted-journal editing");
+  let deleteBlocked = false;
+  try {
+    await db.journalEntry.delete({ where: { id: protectedJournal.id } });
+  } catch {
+    deleteBlocked = true;
+  }
+  assert.ok(deleteBlocked, "The database must block posted-journal deletion");
+  let unbalancedBlocked = false;
+  try {
+    await db.$transaction(async (tx) => {
+      await tx.journalEntry.create({
+        data: {
+          journalNumber: "J-VERIFY-UNBALANCED",
+          description: "This verification entry must be rejected",
+          sourceEventType: "CONTROL_TEST",
+          sourceReference: "VERIFY-UNBALANCED",
+          entryDate: new Date("2026-10-16T12:00:00Z"),
+          status: "POSTED",
+          branchId: protectedJournal.branchId,
+          periodId: protectedJournal.periodId,
+          actorUserId: protectedJournal.actorUserId,
+          lines: {
+            create: [
+              {
+                accountId: accounts[0].id,
+                debitPesewas: 100,
+                creditPesewas: 0,
+              },
+              { accountId: accounts[1].id, debitPesewas: 0, creditPesewas: 99 },
+            ],
+          },
+        },
+      });
+    });
+  } catch {
+    unbalancedBlocked = true;
+  }
+  assert.ok(unbalancedBlocked, "The database must reject unbalanced journals");
+  let duplicateSourceBlocked = false;
+  try {
+    await db.journalEntry.create({
+      data: {
+        journalNumber: "J-VERIFY-DUPLICATE-SOURCE",
+        description: "This duplicate source must be rejected",
+        sourceEventType: "CONTROL_TEST",
+        sourceReference: protectedJournal.sourceReference,
+        entryDate: new Date("2026-10-16T12:00:00Z"),
+        status: "POSTED",
+        branchId: protectedJournal.branchId,
+        periodId: accountingPeriods.find((period) => period.status === "OPEN")!
+          .id,
+        actorUserId: protectedJournal.actorUserId,
+        lines: {
+          create: [
+            { accountId: accounts[0].id, debitPesewas: 100, creditPesewas: 0 },
+            { accountId: accounts[1].id, debitPesewas: 0, creditPesewas: 100 },
+          ],
+        },
+      },
+    });
+  } catch {
+    duplicateSourceBlocked = true;
+  }
+  assert.ok(
+    duplicateSourceBlocked,
+    "The database must reject duplicate source-event posting",
+  );
+
+  const fundAccounts = await db.fundAccount.findMany({
+    include: {
+      lots: {
+        include: { movements: true, reservations: true, allocations: true },
+      },
+    },
+  });
+  const ownerAccount = fundAccounts.find(
+    (account) => account.sourceType === "OWNER_CAPITAL",
+  );
+  assert.ok(ownerAccount?.eligibleForFunding, "Owner capital must be eligible");
+  assert.equal(
+    ownerAccount.lots.length,
+    3,
+    "Three owner-capital lots expected",
+  );
+  assert.equal(
+    ownerAccount.lots.reduce((sum, lot) => sum + lot.originalPesewas, 0),
+    5_800_000,
+    "Verified fictional owner capital must total GHS 58,000",
+  );
+  const excludedSources = fundAccounts.filter(
+    (account) => !account.eligibleForFunding,
+  );
+  assert.deepEqual(
+    new Set(excludedSources.map((account) => account.sourceType)),
+    new Set([
+      "EXCLUDED_CUSTODY",
+      "EXCLUDED_RECEIVABLE",
+      "EXCLUDED_SUSPENSE",
+      "EXCLUDED_OVERPAYMENT",
+      "INVESTOR_PRINCIPAL",
+    ]),
+    "Every prohibited source must remain excluded",
+  );
+  const recovery = ownerAccount.lots
+    .flatMap((lot) => lot.movements)
+    .find((movement) => movement.movementType === "RECOVERED");
+  assert.ok(recovery, "A principal/interest recovery trace is required");
+  assert.equal(recovery.principalAmountPesewas, 166_667);
+  assert.equal(recovery.interestAmountPesewas, 33_333);
+
+  let overAllocationBlocked = false;
+  try {
+    await db.fundLot.update({
+      where: { id: ownerAccount.lots[0].id },
+      data: { reservedPesewas: { increment: 10_000_000 } },
+    });
+  } catch {
+    overAllocationBlocked = true;
+  }
+  assert.ok(
+    overAllocationBlocked,
+    "The database must prevent attribution above verified lot capital",
+  );
+
+  const controlledRelease = await db.loan.findUniqueOrThrow({
+    where: { loanNumber: "APP-0268" },
+    include: {
+      borrower: true,
+      applicationDocuments: true,
+      decisions: true,
+      fundingReservations: {
+        include: { fundLot: { include: { fundAccount: true } } },
+      },
+      disbursement: { include: { voucher: true, journal: true } },
+      repaymentInstalments: true,
+    },
+  });
+  assert.ok(
+    ["AWAITING_DISBURSEMENT", "ACTIVE"].includes(controlledRelease.status),
+  );
+  assert.ok(controlledRelease.borrower.ghanaCardVerified);
+  assert.ok(
+    controlledRelease.applicationDocuments.some(
+      (document) =>
+        document.type === "SIGNED_CONTRACT" && document.status === "VERIFIED",
+    ),
+    "Awaiting release must have a verified signed contract",
+  );
+  assert.ok(
+    controlledRelease.decisions.some(
+      (decision) => decision.status === "APPROVED",
+    ),
+    "Awaiting release must have Manager authorization",
+  );
+  const releaseReservation = controlledRelease.fundingReservations.find(
+    (reservation) =>
+      reservation.status ===
+      (controlledRelease.disbursement ? "COMMITTED" : "RESERVED"),
+  );
+  assert.ok(
+    releaseReservation,
+    "Awaiting release must have an active reservation",
+  );
+  assert.equal(
+    releaseReservation.amountPesewas,
+    controlledRelease.principalPesewas,
+  );
+  assert.ok(releaseReservation.fundLot.verifiedAt);
+  assert.ok(releaseReservation.fundLot.fundAccount.eligibleForFunding);
+  if (controlledRelease.disbursement) {
+    assert.equal(controlledRelease.status, "ACTIVE");
+    assert.ok(controlledRelease.disbursedAt);
+    assert.ok(controlledRelease.disbursement.voucher);
+    assert.equal(controlledRelease.disbursement.journal.status, "POSTED");
+    assert.ok(
+      controlledRelease.repaymentInstalments.length > 0,
+      "A released loan must have its anchored repayment schedule",
+    );
+  }
+
+  const disbursementIndexes = await db.$queryRaw<
+    { indexdef: string }[]
+  >`SELECT indexdef FROM pg_indexes WHERE schemaname = 'public' AND tablename = 'disbursements'`;
+  const indexDefinitions = disbursementIndexes
+    .map(({ indexdef }) => indexdef)
+    .join(" ");
+  assert.match(indexDefinitions, /UNIQUE.*\("idempotencyKey"\)/);
+  assert.match(indexDefinitions, /UNIQUE.*\("loanId"\)/);
+  assert.match(indexDefinitions, /UNIQUE.*\("reservationId"\)/);
+
   console.log(
-    "Seed verification passed: borrower domain, identity and access records exist, reactivation uses independent staff, loan terms and receipt allocations are correct, and every journal balances.",
+    "Seed verification passed: operational records, accounting controls, capital traceability, and controlled cash-release prerequisites are valid.",
   );
 }
 

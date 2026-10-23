@@ -3,7 +3,10 @@ import { WorkspaceSidebar } from "../components/workspace-sidebar";
 import { WorkspaceTopbar } from "../components/workspace-topbar";
 import { prototypeWorkspace } from "@/lib/workspace-context";
 import { requireServerSession } from "@/server/auth/session";
-import { requireBranchScope, branchScopeLabel } from "@/server/auth/branch-scope";
+import {
+  requireBranchScope,
+  branchScopeLabel,
+} from "@/server/auth/branch-scope";
 
 export default function WorkspaceLayout({ children }: { children: ReactNode }) {
   return (
@@ -32,7 +35,7 @@ async function AuthenticatedWorkspace({ children }: { children: ReactNode }) {
     .join("");
   const authenticatedUser = { ...session.user, initials };
   return (
-    <div className="flex min-h-[calc(100vh-33px)]">
+    <div className="workspace-shell flex min-h-[calc(100vh-33px)]">
       <Suspense
         fallback={
           <div
@@ -61,6 +64,10 @@ async function AuthenticatedWorkspace({ children }: { children: ReactNode }) {
           <WorkspaceTopbar
             user={authenticatedUser}
             unreadNotifications={prototypeWorkspace.unreadNotifications}
+            branch={branch}
+            permissions={session.user.permissions}
+            featureGate={session.user.featureGate}
+            restrictions={session.user.restrictions}
           />
         </Suspense>
         {children}

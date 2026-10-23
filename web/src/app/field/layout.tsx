@@ -36,7 +36,14 @@ async function AuthorizedFieldLayout({ children }: { children: ReactNode }) {
         }
       >
         <FieldMobileChrome
-          collector={{ name: session.user.name, role: "Field Collector" }}
+          collector={{
+            name: session.user.name,
+            role: session.user.role
+              .toLowerCase()
+              .split("_")
+              .map((word) => word[0].toUpperCase() + word.slice(1))
+              .join(" "),
+          }}
           branch={branch.name}
           online
           displayDate={prototypeWorkspace.displayDate.toISOString()}

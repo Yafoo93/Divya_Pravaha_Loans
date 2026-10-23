@@ -7,7 +7,7 @@ import { WorkspacePermissionBoundary } from "../../components/server-permission-
 
 export function generateStaticParams() {
   return workspaceNavigation
-    .filter((item) => item.href !== "/workspace")
+    .filter((item) => item.href.startsWith("/workspace/"))
     .map((item) => ({
       section: item.href.replace("/workspace/", "").split("/"),
     }));
