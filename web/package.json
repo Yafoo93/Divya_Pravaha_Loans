@@ -18,8 +18,11 @@
     "db:migrate": "prisma migrate dev --config ./prisma7.config.ts",
     "db:status": "prisma migrate status --config ./prisma7.config.ts",
     "db:seed": "tsx prisma/seed.ts",
+    "db:seed-initial-users": "tsx prisma/seed-initial-users.ts",
+    "db:verify-initial-users": "tsx prisma/verify-initial-users.ts",
     "db:verify-seed": "tsx prisma/verify-seed.ts",
-    "db:verify-audit": "tsx prisma/verify-audit.ts"
+    "db:verify-audit": "tsx prisma/verify-audit.ts",
+    "postinstall": "prisma generate --config ./prisma7.config.ts"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.10.1",

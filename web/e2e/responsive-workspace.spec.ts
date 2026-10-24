@@ -65,6 +65,10 @@ for (const viewport of viewports) {
         await expect(page.locator("main")).toBeVisible();
         await expectNoPageOverflow(page);
       }
+
+      await expect(page.getByText("RCT-RECOVERY-CAP-002")).toBeVisible();
+      await expect(page.getByText("GHS 1,666.67").first()).toBeVisible();
+      await expect(page.getByText("GHS 333.33").first()).toBeVisible();
     });
   });
 }

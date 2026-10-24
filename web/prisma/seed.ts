@@ -1451,7 +1451,18 @@ async function main() {
 
     const allocation = await tx.fundAllocation.upsert({
       where: { allocationNumber: "ALLOC-LN-0204" },
-      update: {},
+      update: {
+        amountPesewas: 1_000_000,
+        recoveredPrincipalPesewas: 166_667,
+        recoveredInterestPesewas: 33_333,
+        status: "RECOVERED",
+        allocatedAt: new Date("2026-04-29T14:00:00Z"),
+        disbursedAt: new Date("2026-04-30T10:00:00Z"),
+        recoveredAt: new Date("2026-09-30T14:40:00Z"),
+        fundLotId: capitalLots.get("CAP-002")!.id,
+        loanId: loan.id,
+        isSampleData: true,
+      },
       create: {
         allocationNumber: "ALLOC-LN-0204",
         amountPesewas: 1_000_000,
@@ -1468,7 +1479,18 @@ async function main() {
     });
     await tx.fundMovement.upsert({
       where: { sourceReference: "RCT-RECOVERY-CAP-002" },
-      update: {},
+      update: {
+        movementType: "RECOVERED",
+        amountPesewas: 200_000,
+        principalAmountPesewas: allocation.recoveredPrincipalPesewas,
+        interestAmountPesewas: allocation.recoveredInterestPesewas,
+        notes:
+          "Principal recovery attributed to original lot; interest retained separately",
+        occurredAt: new Date("2026-09-30T14:40:00Z"),
+        fundLotId: capitalLots.get("CAP-002")!.id,
+        actorUserId: cashier.id,
+        isSampleData: true,
+      },
       create: {
         movementNumber: "MOV-RECOVERY-CAP-002",
         movementType: "RECOVERED",
@@ -1481,6 +1503,18 @@ async function main() {
         occurredAt: new Date("2026-09-30T14:40:00Z"),
         fundLotId: capitalLots.get("CAP-002")!.id,
         actorUserId: cashier.id,
+        isSampleData: true,
+      },
+    });
+    await tx.fundLot.update({
+      where: { lotNumber: "CAP-002" },
+      data: {
+        // GHS 10,000.00 was deployed. The first GHS 1,666.67 principal
+        // repayment becomes available again; GHS 333.33 interest does not.
+        availablePesewas: 966_667,
+        disbursedPesewas: 833_333,
+        recoveredPesewas: 166_667,
+        status: "RECOVERED",
         isSampleData: true,
       },
     });

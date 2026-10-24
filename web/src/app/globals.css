@@ -67,8 +67,17 @@ video {
 }
 
 .workspace-shell .overflow-x-auto {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
   overscroll-behavior-inline: contain;
   -webkit-overflow-scrolling: touch;
+}
+
+/* Grid and flex children default to a content-sized minimum. Resetting wrapper
+   divs keeps wide tables inside their own horizontal scroll container. */
+.workspace-shell main div {
+  min-width: 0;
 }
 
 @media (max-width: 639px) {
