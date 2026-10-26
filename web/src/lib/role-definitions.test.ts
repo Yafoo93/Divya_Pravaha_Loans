@@ -16,13 +16,11 @@ describe("requirements role definitions", () => {
     expect(roleDefinition("AUDITOR")?.restrictions).toEqual(["read_only"]);
   });
 
-  it("keeps both investor roles behind legal approval", () => {
+  it("activates private-capital roles without a public-investment gate", () => {
     expect(
       roleDefinitions
         .filter(({ code }) => code.startsWith("INVESTOR"))
-        .every(
-          ({ featureGate }) => featureGate === "investor_module_legal_approval",
-        ),
+        .every(({ featureGate }) => featureGate === null),
     ).toBe(true);
   });
 });

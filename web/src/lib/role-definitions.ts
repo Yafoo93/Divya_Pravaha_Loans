@@ -48,6 +48,10 @@ export const roleDefinitions: readonly RoleDefinition[] = [
       "perform_reconciliation",
       "prepare_period_close",
       "read_financial_history",
+      "manage_capital_sources",
+      "manage_private_investors",
+      "prepare_investor_payouts",
+      "approve_investor_payouts",
     ],
     restrictions: [],
     featureGate: null,
@@ -99,12 +103,15 @@ export const roleDefinitions: readonly RoleDefinition[] = [
     name: "Investor Portfolio Officer",
     description: "Prepares gated investor records.",
     permissions: [
+      "manage_capital_sources",
+      "manage_private_investors",
       "prepare_investor_records",
       "prepare_contracts",
       "prepare_payout_requests",
+      "prepare_investor_payouts",
     ],
     restrictions: [],
-    featureGate: "investor_module_legal_approval",
+    featureGate: null,
   },
   {
     code: "AUDITOR",
@@ -128,7 +135,7 @@ export const roleDefinitions: readonly RoleDefinition[] = [
       "view_own_maturities",
     ],
     restrictions: ["own_records_only", "read_only"],
-    featureGate: "investor_module_legal_approval",
+    featureGate: null,
   },
 ] as const;
 

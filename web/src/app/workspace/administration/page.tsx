@@ -16,13 +16,13 @@ const policySignOffs = [
 ] as const;
 
 const investorGates = [
-  "Written legal classification",
-  "Licensing and regulatory confirmation",
-  "Approved signed contract",
-  "Approved tax treatment",
-  "Maturity, payout and early-exit rules",
-  "Approved accounting treatment",
-  "Management activation sign-off",
+  "Private named contributors only",
+  "No public solicitation",
+  "Cleared-funds evidence required",
+  "60% daily simple-return basis",
+  "Principal repayment blocked before maturity",
+  "Independent payout approval",
+  "Principal and returns posted separately",
 ] as const;
 
 const securityControls = [
@@ -286,7 +286,7 @@ export default async function AdministrationPage() {
                 <h2 className="text-lg font-bold">
                   Baseline sign-off readiness
                 </h2>
-                <Badge variant="success">PROTOTYPE APPROVED</Badge>
+                <Badge variant="success">PRIVATE CAPITAL ACTIVE</Badge>
               </div>
               <p className="text-muted mt-1 text-sm">
                 Owner-confirmed for the Phase 1 demonstration on 21 Oct 2026.
@@ -311,9 +311,10 @@ export default async function AdministrationPage() {
                 <Badge variant="success">PROTOTYPE APPROVED</Badge>
               </div>
               <p className="text-muted mt-1 text-sm">
-                The owner has approved the checklist for demonstration. Real
-                investor money, contracts, allocation, maturity, and payout
-                remain production-locked until external approvals are recorded.
+                Activated as an internal register for named owner, family, and
+                other private business-support funds. Public investment
+                solicitation is not supported. External legal and tax advice
+                remains the owner&apos;s responsibility.
               </p>
               <div className="divide-border mt-4 divide-y">
                 {investorGates.map((gate) => (
@@ -322,17 +323,16 @@ export default async function AdministrationPage() {
                     className="flex items-center justify-between gap-3 py-3"
                   >
                     <span className="text-sm font-semibold">{gate}</span>
-                    <Badge variant="success">APPROVED</Badge>
+                    <Badge variant="success">ENFORCED</Badge>
                   </div>
                 ))}
               </div>
-              <button
-                type="button"
-                disabled
-                className="bg-background text-muted mt-4 min-h-11 w-full cursor-not-allowed rounded-lg px-4 text-sm font-bold opacity-70"
+              <Link
+                href="/workspace/investors"
+                className="bg-primary mt-4 flex min-h-11 w-full items-center justify-center rounded-lg px-4 text-sm font-bold text-white"
               >
-                Production activation · locked
-              </button>
+                Open private capital portfolio
+              </Link>
             </Card>
           </aside>
         </div>

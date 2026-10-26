@@ -59,6 +59,12 @@ export const workspacePagePermissions = {
     "read_financial_history",
   ],
   "/workspace/capital": ["manage_ledger", "read_financial_history"],
+  "/workspace/investors": [
+    "manage_private_investors",
+    "prepare_investor_payouts",
+    "approve_investor_payouts",
+    "read_financial_history",
+  ],
   "/workspace/administration": [
     "manage_users",
     "manage_roles",

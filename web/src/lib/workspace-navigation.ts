@@ -112,6 +112,17 @@ export const workspaceNavigation: readonly WorkspaceNavigationItem[] = [
     allowedRoles: ["MANAGER", "CASHIER_ACCOUNTANT", "AUDITOR"],
   },
   {
+    label: "Private investors",
+    href: "/workspace/investors",
+    shortLabel: "IV",
+    allowedRoles: [
+      "MANAGER",
+      "INVESTOR_PORTFOLIO_OFFICER",
+      "CASHIER_ACCOUNTANT",
+      "AUDITOR",
+    ],
+  },
+  {
     label: "Administration",
     href: "/workspace/administration",
     shortLabel: "AD",

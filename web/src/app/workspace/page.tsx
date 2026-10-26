@@ -412,9 +412,9 @@ export default async function WorkspaceOverviewPage() {
             />
             <KpiCard
               label="Investor gate"
-              value="LOCKED"
-              formula="Unavailable until legal and accounting activation"
-              href="/workspace/administration#investor-gates"
+              value="PRIVATE ONLY"
+              formula="Named family/private capital active; public solicitation disabled"
+              href="/workspace/investors"
             />
           </section>
         ) : null}

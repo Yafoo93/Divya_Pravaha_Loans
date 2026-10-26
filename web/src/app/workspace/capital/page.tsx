@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import Link from "next/link";
 import { formatAccraDate, formatGhsFromPesewas } from "@/lib/formatters";
 import {
   branchScopeLabel,
@@ -63,6 +64,16 @@ export default async function CapitalPage() {
           branchName={branch.name}
           date={new Date()}
           currency="GHS"
+          actions={
+            session.user.permissions.includes("manage_capital_sources") ? (
+              <Link
+                href="/workspace/capital/new"
+                className="bg-primary rounded-lg px-4 py-3 text-sm font-bold text-white"
+              >
+                Record capital source
+              </Link>
+            ) : undefined
+          }
         />
 
         <div className="bg-primary/5 text-primary border-primary/15 mt-6 rounded-xl border px-4 py-3 text-sm">

@@ -35,6 +35,7 @@ describe("permission-aware workspace navigation", () => {
       .map((item) => item.href);
     expect(managerLinks).toEqual(operationalLinks);
     expect(managerLinks).toContain("/workspace/capital");
+    expect(managerLinks).toContain("/workspace/investors");
     expect(managerLinks).toContain("/workspace/accounting");
     expect(managerLinks).toContain("/workspace/cash-collections");
     expect(managerLinks).toContain("/workspace/handovers");

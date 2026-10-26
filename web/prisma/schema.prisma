@@ -180,6 +180,7 @@ enum FundSourceType {
   OWNER_CAPITAL
   RECOVERED_PRINCIPAL
   INTEREST_INCOME
+  OTHER_INCOME
   INVESTOR_PRINCIPAL
   EXCLUDED_CUSTODY
   EXCLUDED_RECEIVABLE
@@ -193,6 +194,33 @@ enum FundLotStatus {
   COMMITTED
   DISBURSED
   RECOVERED
+  CANCELLED
+}
+
+enum CapitalContributorType {
+  OWNER
+  FAMILY
+  OTHER_PRIVATE
+}
+
+enum PrivateInvestmentStatus {
+  ACTIVE
+  MATURED
+  CLOSED
+  CANCELLED
+}
+
+enum InvestorPayoutType {
+  RETURN
+  PRINCIPAL
+  MIXED
+}
+
+enum InvestorPayoutStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  PAID
   CANCELLED
 }
 
@@ -224,6 +252,9 @@ model Branch {
   suspenseItems           SuspenseItem[]
   overpaymentLiabilities  OverpaymentLiability[]
   fundAccounts            FundAccount[]
+  capitalContributors     CapitalContributor[]
+  privateInvestments      PrivateInvestment[]
+  investorPayouts         InvestorPayout[]
   borrowerRestrictions    BorrowerRestriction[]
   createdAt               DateTime                 @default(now())
   updatedAt               DateTime                 @updatedAt
@@ -290,6 +321,10 @@ model User {
   periodReopenRequestsMade    PeriodReopeningRequest[] @relation("PeriodReopenRequester")
   periodReopenRequestsDecided PeriodReopeningRequest[] @relation("PeriodReopenChecker")
   fundMovementsRecorded       FundMovement[]           @relation("FundMovementActor")
+  capitalContributorsCreated  CapitalContributor[]     @relation("CapitalContributorCreator")
+  privateInvestmentsCreated   PrivateInvestment[]      @relation("PrivateInvestmentCreator")
+  investorPayoutsRequested    InvestorPayout[]         @relation("InvestorPayoutRequester")
+  investorPayoutsDecided      InvestorPayout[]         @relation("InvestorPayoutChecker")
   disbursementsPrepared       Disbursement[]           @relation("DisbursementPreparer")
   disbursementsAuthorized     Disbursement[]           @relation("DisbursementAuthorizer")
   receiptsCollected           Receipt[]                @relation("ReceiptCollector")
@@ -1494,11 +1529,116 @@ model FundLot {
   movements         FundMovement[]
   reservations      FundingReservation[]
   allocations       FundAllocation[]
+  privateInvestment PrivateInvestment?
   createdAt         DateTime             @default(now())
   updatedAt         DateTime             @updatedAt
 
   @@index([fundAccountId, status])
   @@map("fund_lots")
+}
+
+model CapitalContributor {
+  id                String                 @id @default(cuid())
+  contributorNumber String                 @unique @db.VarChar(40)
+  type              CapitalContributorType
+  legalName         String                 @db.VarChar(150)
+  phone             String?                @db.VarChar(30)
+  email             String?                @db.VarChar(254)
+  identityReference String?                @db.VarChar(80)
+  address           String?                @db.VarChar(300)
+  relationshipNote  String?                @db.VarChar(200)
+  isActive          Boolean                @default(true)
+  branchId          String
+  createdByUserId   String
+  branch            Branch                 @relation(fields: [branchId], references: [id])
+  createdBy         User                   @relation("CapitalContributorCreator", fields: [createdByUserId], references: [id])
+  investments       PrivateInvestment[]
+  createdAt         DateTime               @default(now())
+  updatedAt         DateTime               @updatedAt
+
+  @@index([branchId, type, isActive])
+  @@index([legalName])
+  @@map("capital_contributors")
+}
+
+model PrivateInvestment {
+  id                     String                  @id @default(cuid())
+  contractNumber         String                  @unique @db.VarChar(50)
+  principalPesewas       Int
+  annualReturnBps        Int                     @default(6000)
+  dayBasis               Int                     @default(365)
+  startDate              DateTime
+  maturityDate           DateTime
+  clearedAt              DateTime
+  evidenceReference      String                  @db.VarChar(120)
+  status                 PrivateInvestmentStatus @default(ACTIVE)
+  accruedReturnPesewas   Int                     @default(0)
+  returnPaidPesewas      Int                     @default(0)
+  principalRepaidPesewas Int                     @default(0)
+  branchId               String
+  contributorId          String
+  fundLotId              String                  @unique
+  createdByUserId        String
+  branch                 Branch                  @relation(fields: [branchId], references: [id])
+  contributor            CapitalContributor      @relation(fields: [contributorId], references: [id], onDelete: Restrict)
+  fundLot                FundLot                 @relation(fields: [fundLotId], references: [id], onDelete: Restrict)
+  createdBy              User                    @relation("PrivateInvestmentCreator", fields: [createdByUserId], references: [id])
+  accruals               InvestorReturnAccrual[]
+  payouts                InvestorPayout[]
+  createdAt              DateTime                @default(now())
+  updatedAt              DateTime                @updatedAt
+
+  @@index([branchId, status, maturityDate])
+  @@index([contributorId, status])
+  @@map("private_investments")
+}
+
+model InvestorReturnAccrual {
+  id              String            @id @default(cuid())
+  accrualNumber   String            @unique @db.VarChar(60)
+  fromDate        DateTime
+  throughDate     DateTime
+  daysAccrued     Int
+  amountPesewas   Int
+  sourceReference String            @unique @db.VarChar(80)
+  investmentId    String
+  investment      PrivateInvestment @relation(fields: [investmentId], references: [id], onDelete: Restrict)
+  createdAt       DateTime          @default(now())
+
+  @@unique([investmentId, throughDate])
+  @@index([investmentId, throughDate])
+  @@map("investor_return_accruals")
+}
+
+model InvestorPayout {
+  id                     String               @id @default(cuid())
+  payoutNumber           String               @unique @db.VarChar(60)
+  idempotencyKey         String               @unique @db.VarChar(100)
+  type                   InvestorPayoutType
+  returnAmountPesewas    Int                  @default(0)
+  principalAmountPesewas Int                  @default(0)
+  reason                 String               @db.VarChar(500)
+  payeeVerified          Boolean              @default(false)
+  status                 InvestorPayoutStatus @default(PENDING)
+  requestedAt            DateTime             @default(now())
+  decidedAt              DateTime?
+  paidAt                 DateTime?
+  decisionReason         String?              @db.VarChar(500)
+  paymentReference       String?              @db.VarChar(100)
+  branchId               String
+  investmentId           String
+  requestedByUserId      String
+  decidedByUserId        String?
+  branch                 Branch               @relation(fields: [branchId], references: [id])
+  investment             PrivateInvestment    @relation(fields: [investmentId], references: [id], onDelete: Restrict)
+  requestedBy            User                 @relation("InvestorPayoutRequester", fields: [requestedByUserId], references: [id])
+  decidedBy              User?                @relation("InvestorPayoutChecker", fields: [decidedByUserId], references: [id])
+  createdAt              DateTime             @default(now())
+  updatedAt              DateTime             @updatedAt
+
+  @@index([branchId, status, requestedAt])
+  @@index([investmentId, status])
+  @@map("investor_payouts")
 }
 
 model FundMovement {
