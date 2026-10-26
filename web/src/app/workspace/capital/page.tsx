@@ -8,6 +8,8 @@ import { requireWorkspacePath } from "@/server/auth/session";
 import { PageHeading } from "../../components/page-heading";
 import { Badge, Card } from "../../components/ui/data-display";
 
+export const instant = false;
+
 const badgeVariant = {
   AVAILABLE: "success",
   RESERVED: "warning",

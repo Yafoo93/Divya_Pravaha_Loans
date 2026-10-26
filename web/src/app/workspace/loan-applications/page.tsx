@@ -8,6 +8,8 @@ import { requireWorkspacePath } from "@/server/auth/session";
 import { LoanApplicationQueue } from "../../components/loan-application-queue";
 import { PageHeading } from "../../components/page-heading";
 
+export const instant = false;
+
 export default async function LoanApplicationsPage() {
   const session = await requireWorkspacePath("/workspace/loan-applications");
   const scope = await requireBranchScope(session);

@@ -9,6 +9,8 @@ import { requireWorkspacePath } from "@/server/auth/session";
 import { BorrowerDirectory } from "../../components/borrower-directory";
 import { PageHeading } from "../../components/page-heading";
 
+export const instant = false;
+
 export default async function BorrowersPage() {
   const session = await requireWorkspacePath("/workspace/borrowers");
   const scope = await requireBranchScope(session);

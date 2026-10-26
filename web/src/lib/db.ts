@@ -13,13 +13,20 @@ const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
 };
 
-const adapter = new PrismaPg({ connectionString });
-
-export const db =
-  globalForPrisma.prisma ??
-  new PrismaClient({
-    adapter,
+function createPrismaClient() {
+  const adapter = new PrismaPg({
+    connectionString,
+    max: 5,
+    connectionTimeoutMillis: 15_000,
+    idleTimeoutMillis: 30_000,
+    keepAlive: true,
+    keepAliveInitialDelayMillis: 10_000,
   });
+
+  return new PrismaClient({ adapter });
+}
+
+export const db = globalForPrisma.prisma ?? createPrismaClient();
 
 if (process.env.NODE_ENV !== "production") {
   globalForPrisma.prisma = db;
