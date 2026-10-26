@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import type { ReactNode } from "react";
-import { SampleDataBanner } from "./components/sample-data-banner";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -15,8 +14,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Divya Pravaha - Sample Workspace",
-  description: "Divya Pravaha loan management demonstration workspace",
+  title: "Divya Pravaha Loan Management",
+  description: "Divya Pravaha loan management system",
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
@@ -32,7 +31,6 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         >
           Skip to main content
         </a>
-        <SampleDataBanner />
         <div id="main-content" tabIndex={-1} className="flex flex-1 flex-col">
           {children}
         </div>

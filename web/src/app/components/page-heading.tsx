@@ -1,6 +1,5 @@
 import type { ReactNode } from "react";
 import { formatAccraHeadingDate } from "@/lib/workspace-context";
-import { SampleDataBadge } from "./sample-data-banner";
 
 type PageHeadingProps = {
   title: string;
@@ -32,10 +31,11 @@ export function PageHeading({
           <p className="text-muted mt-2 max-w-3xl">{description}</p>
         )}
       </div>
-      <div className="flex w-full flex-wrap items-center gap-3 sm:w-auto sm:justify-end">
-        <SampleDataBadge />
-        {actions}
-      </div>
+      {actions && (
+        <div className="flex w-full flex-wrap items-center gap-3 sm:w-auto sm:justify-end">
+          {actions}
+        </div>
+      )}
     </header>
   );
 }
