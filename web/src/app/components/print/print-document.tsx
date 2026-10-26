@@ -44,7 +44,7 @@ export function PrintDocument({
       <footer className="border-border text-muted relative flex justify-between gap-4 border-t px-6 py-4 text-[10px]">
         <span>Kasoa Market · Ghana · Currency: GHS</span>
         <strong className="text-danger uppercase">
-          Sample data — not a valid financial document
+          Verify this document against the system record
         </strong>
       </footer>
     </article>

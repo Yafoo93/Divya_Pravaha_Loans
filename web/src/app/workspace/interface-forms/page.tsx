@@ -14,7 +14,7 @@ export default function InterfaceFormsPage() {
           <div className="mx-auto max-w-5xl">
             <PageHeading
               title="Form controls"
-              description="Prototype controls with clear labels, help, validation, and disabled states."
+              description="Form controls with labels, validation, and disabled states."
               branchName={prototypeWorkspace.branch.name}
               date={prototypeWorkspace.displayDate}
               currency={prototypeWorkspace.currency}

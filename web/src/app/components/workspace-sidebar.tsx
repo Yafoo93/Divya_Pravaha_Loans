@@ -102,7 +102,7 @@ export function WorkspaceSidebar({
 
       <div className="border-border m-4 rounded-xl border p-3">
         <p className="text-primary text-[10px] font-extrabold tracking-wider uppercase">
-          Prototype access
+          Access controls
         </p>
         <p className="mt-1 text-sm font-semibold">
           {role.replaceAll("_", " ")}

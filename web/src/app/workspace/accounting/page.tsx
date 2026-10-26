@@ -499,7 +499,7 @@ export default async function AccountingPage({
           </Card>
           <div className="space-y-6">
             <Card
-              title="Prototype report library"
+              title="Report library"
               description="Live previews from the controlled ledger"
             >
               <nav className="divide-y">
@@ -595,7 +595,7 @@ export default async function AccountingPage({
             title={selectedReport
               .replaceAll("-", " ")
               .replace(/\b\w/g, (letter) => letter.toUpperCase())}
-            description="Reconciled prototype summary generated from the branch-scoped seeded ledger and operational detail."
+            description="Reconciled summary generated from branch-scoped ledger and operational records."
           >
             <div className="grid gap-3 sm:grid-cols-3">
               {reportMetrics[selectedReport].map((metric) => (

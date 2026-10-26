@@ -61,7 +61,7 @@ export function RoleDirectory({
 
   return (
     <>
-      <Alert title="Approved prototype access matrix" variant="info">
+      <Alert title="Approved access matrix" variant="info">
         Role permissions follow System Requirements v1.1. Server-side
         enforcement and effective-dated permission changes are separate
         checklist tasks.
@@ -184,7 +184,7 @@ export function RoleDirectory({
                 </Alert>
               )}
               <div className="border-border border-t pt-4 text-sm">
-                <span className="text-muted">Assigned prototype staff</span>
+                <span className="text-muted">Assigned staff</span>
                 <span className="float-right font-bold">
                   {countStaffByRole(staff, selected.code)}
                 </span>

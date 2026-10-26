@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { LoginForm } from "../components/login-form";
 import { CompanyLogo } from "../components/company-logo";
-import { prototypeLoginAccounts } from "@/lib/workspace-context";
 
 export const metadata: Metadata = { title: "Staff sign in · Divya Pravaha" };
 
@@ -40,25 +39,16 @@ export default function LoginPage() {
 
       <section className="flex items-center justify-center px-5 py-10 sm:px-10">
         <div className="w-full max-w-lg">
-          <span className="bg-primary/10 text-primary inline-flex rounded-full px-3 py-1 text-xs font-bold uppercase">
-            Demo workspace
-          </span>
-          <h2 className="mt-6 text-4xl font-bold">Welcome back.</h2>
-          <p className="text-muted mt-2">
-            Sign in to your staff workspace using your individual account.
-          </p>
+          <h2 className="text-4xl font-bold">Welcome back.</h2>
           <div className="border-border bg-surface mt-8 rounded-2xl border p-6 shadow-sm sm:p-8">
             <h3 className="text-xl font-bold">Staff sign-in</h3>
             <p className="text-muted mt-1 text-sm">
               Enter your email address and password.
             </p>
             <div className="mt-6">
-              <LoginForm accounts={prototypeLoginAccounts} />
+              <LoginForm />
             </div>
           </div>
-          <p className="text-muted mt-5 text-xs">
-            Private staff access only · No live financial transactions
-          </p>
         </div>
       </section>
     </main>

@@ -159,7 +159,7 @@ export function BranchDirectory({
         <div className="border-border border-b p-5">
           <h2 className="text-lg font-bold">Branches</h2>
           <p className="text-muted mt-1 text-sm">
-            Prototype operating branches and activation state.
+            Operating branches and activation state.
           </p>
         </div>
         <DataTable
@@ -215,8 +215,7 @@ export function BranchDirectory({
           {available.length === 0 && (
             <div className="p-4">
               <Alert title="All staff assigned" variant="info">
-                Every prototype staff identity is directly assigned to this
-                branch.
+                Every staff identity is directly assigned to this branch.
               </Alert>
             </div>
           )}
@@ -243,7 +242,7 @@ export function BranchDirectory({
         title={`${pending?.mode === "ASSIGN" ? "Assign" : "Unassign"} staff`}
         message={
           pending && branch
-            ? `${pending.staff.name} will be ${pending.mode === "ASSIGN" ? "assigned to" : "removed from"} ${branch.name} in this prototype view. This does not change the database yet.`
+            ? `${pending.staff.name} will be ${pending.mode === "ASSIGN" ? "assigned to" : "removed from"} ${branch.name}. Confirm before continuing.`
             : ""
         }
         confirmLabel={

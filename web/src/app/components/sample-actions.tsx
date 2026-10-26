@@ -57,7 +57,7 @@ export function SampleActions() {
       <div className="mt-5 space-y-3">
         {showAlert && (
           <Alert
-            title="Prototype notice"
+            title="Action notice"
             variant="info"
             onDismiss={() => setShowAlert(false)}
           >
@@ -65,7 +65,7 @@ export function SampleActions() {
           </Alert>
         )}
         <Alert title="Controls active" variant="success">
-          Confirmation is required before sensitive prototype actions.
+          Confirmation is required before sensitive actions.
         </Alert>
       </div>
 
@@ -82,13 +82,13 @@ export function SampleActions() {
 
       <ConfirmationDialog
         open={confirmationOpen}
-        title="Confirm prototype action"
-        message="This demonstration changes only the message shown on this page. It does not change database records."
+        title="Confirm action"
+        message="Confirm that you want to continue."
         confirmLabel="Confirm action"
         destructive
         onCancel={() => setConfirmationOpen(false)}
         onConfirm={() => {
-          setNotice("Prototype action confirmed successfully.");
+          setNotice("Action confirmed successfully.");
           setShowAlert(true);
           setConfirmationOpen(false);
         }}

@@ -14,7 +14,7 @@ export default function BranchAdministrationPage() {
           <div className="mx-auto max-w-7xl">
             <PageHeading
               title="Branches and assignments"
-              description="Review operating branches and control prototype staff access by branch."
+              description="Review operating branches and control staff access by branch."
               branchName={prototypeWorkspace.branch.name}
               date={prototypeWorkspace.displayDate}
               currency={prototypeWorkspace.currency}

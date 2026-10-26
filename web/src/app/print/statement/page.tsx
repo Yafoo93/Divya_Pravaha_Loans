@@ -74,7 +74,7 @@ export default function PrintableStatementPage() {
             />
             <p className="text-muted mt-5 text-xs">
               Contractual balances are separate from accrued accounting income.
-              This statement contains fictional demonstration data.
+              Review this statement against the underlying account records.
             </p>
           </PrintDocument>
         </PrintPage>

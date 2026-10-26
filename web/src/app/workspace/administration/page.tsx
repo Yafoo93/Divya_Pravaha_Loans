@@ -106,7 +106,7 @@ export default async function AdministrationPage() {
           <SummaryCard
             label="Investor-gated roles"
             value={String(gatedRoles)}
-            detail="Prototype approved · production gate retained"
+            detail="Configured policy and control status"
             emphasized
           />
         </section>
@@ -257,7 +257,7 @@ export default async function AdministrationPage() {
             <Card className="p-5">
               <h2 className="text-lg font-bold">Security controls</h2>
               <p className="text-muted mt-1 text-sm">
-                Current prototype enforcement state.
+                Current enforcement state.
               </p>
               <div className="divide-border mt-4 divide-y">
                 {securityControls.map(([label, state]) => (
@@ -289,8 +289,7 @@ export default async function AdministrationPage() {
                 <Badge variant="success">PRIVATE CAPITAL ACTIVE</Badge>
               </div>
               <p className="text-muted mt-1 text-sm">
-                Owner-confirmed for the Phase 1 demonstration on 21 Oct 2026.
-                External production approvals remain separate.
+                Current policy decisions and accountable owners.
               </p>
               <div className="divide-border mt-4 divide-y">
                 {policySignOffs.map(([decision, owner]) => (
@@ -308,7 +307,7 @@ export default async function AdministrationPage() {
             <Card className="p-5">
               <div className="flex items-center justify-between gap-3">
                 <h2 className="text-lg font-bold">Investor module</h2>
-                <Badge variant="success">PROTOTYPE APPROVED</Badge>
+                <Badge variant="success">APPROVED</Badge>
               </div>
               <p className="text-muted mt-1 text-sm">
                 Activated as an internal register for named owner, family, and

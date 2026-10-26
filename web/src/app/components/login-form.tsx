@@ -3,15 +3,10 @@
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import { validateLogin, type LoginValues } from "@/lib/login-validation";
-import type { PrototypeStaffAccount } from "@/lib/workspace-context";
 import { Alert, Button } from "./ui/actions";
 import { InputField } from "./ui/forms";
 
-export function LoginForm({
-  accounts,
-}: {
-  accounts: readonly PrototypeStaffAccount[];
-}) {
+export function LoginForm() {
   const [values, setValues] = useState<LoginValues>({
     email: "",
     password: "",
@@ -71,8 +66,7 @@ export function LoginForm({
           value={values.email}
           onChange={(event) => update("email", event.target.value)}
           error={errors.email}
-          help="Use your individual Divya Pravaha staff account."
-          placeholder="name@divyapravaha.example"
+          placeholder="name@company.com"
           className="min-h-12"
         />
         <div>
@@ -85,7 +79,6 @@ export function LoginForm({
             value={values.password}
             onChange={(event) => update("password", event.target.value)}
             error={errors.password}
-            help="Your password is verified securely and is never stored in plain text."
             className="min-h-12 pr-20"
           />
           <button
@@ -117,37 +110,6 @@ export function LoginForm({
           Continue securely
         </Button>
       </form>
-
-      <div className="border-border mt-6 border-t pt-5">
-        <p className="text-muted text-xs font-bold tracking-wider uppercase">
-          Prototype staff identities
-        </p>
-        <div className="mt-3 space-y-2">
-          {accounts.map((account) => (
-            <button
-              key={account.id}
-              type="button"
-              onClick={() => update("email", account.email)}
-              className="border-border hover:border-primary hover:bg-primary/5 flex min-h-12 w-full items-center gap-3 rounded-xl border px-3 text-left transition"
-            >
-              <span className="bg-primary/10 text-primary flex size-8 items-center justify-center rounded-full text-xs font-black">
-                {account.initials}
-              </span>
-              <span className="min-w-0">
-                <span className="block truncate text-sm font-bold">
-                  {account.name}
-                </span>
-                <span className="text-muted block truncate text-xs">
-                  {account.email}
-                </span>
-              </span>
-            </button>
-          ))}
-        </div>
-        <p className="text-muted mt-3 text-xs">
-          Sample password: <strong>DemoLoan!2026</strong>
-        </p>
-      </div>
     </div>
   );
 }

@@ -406,8 +406,8 @@ export default async function WorkspaceOverviewPage() {
             />
             <KpiCard
               label="Policy sign-offs"
-              value="Approved prototype"
-              formula="Owner-approved prototype controls; production gates retained"
+              value="Approved controls"
+              formula="Configured policy and control status"
               href="/workspace/administration#sign-offs"
             />
             <KpiCard

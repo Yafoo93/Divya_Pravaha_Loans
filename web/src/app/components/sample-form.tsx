@@ -115,7 +115,7 @@ export function SampleForm() {
             label="Loan product"
             value="GROUP_FLAT_20"
             disabled
-            help="Product selection is locked for this prototype workflow."
+            help="Product selection is fixed for this workflow."
           />
           <div className="md:col-span-2">
             <TextareaField
@@ -151,9 +151,8 @@ export function SampleForm() {
         )}
         {submitted && (
           <div className="mt-5">
-            <Alert variant="success" title="Sample form is valid">
-              The demonstration passed client-side validation. No record was
-              saved.
+            <Alert variant="success" title="Form is valid">
+              Validation completed successfully.
             </Alert>
           </div>
         )}
