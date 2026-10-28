@@ -7,7 +7,7 @@ describe("collector mobile navigation", () => {
       "Assignments",
       "Receipts",
       "Handover",
-      "Account",
+      "Overview",
     ]);
   });
 

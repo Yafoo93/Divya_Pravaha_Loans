@@ -30,12 +30,6 @@ export const workspaceNavigation: readonly WorkspaceNavigationItem[] = [
     allowedRoles: allStaff,
   },
   {
-    label: "Notifications",
-    href: "/workspace/notifications",
-    shortLabel: "NT",
-    allowedRoles: allStaff,
-  },
-  {
     label: "Borrowers",
     href: "/workspace/borrowers",
     shortLabel: "BR",
@@ -98,12 +92,6 @@ export const workspaceNavigation: readonly WorkspaceNavigationItem[] = [
       "CASHIER_ACCOUNTANT",
       "AUDITOR",
     ],
-  },
-  {
-    label: "Arrears",
-    href: "/workspace/arrears",
-    shortLabel: "AR",
-    allowedRoles: ["MANAGER", "LOAN_OFFICER", "FIELD_COLLECTOR", "AUDITOR"],
   },
   {
     label: "Accounting & reports",

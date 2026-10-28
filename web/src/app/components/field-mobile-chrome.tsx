@@ -27,7 +27,11 @@ export function FieldMobileChrome({
     <>
       <header className="border-border bg-surface sticky top-0 z-30 border-b">
         <div className="flex items-center justify-between gap-3 px-4 py-3">
-          <div className="flex min-w-0 items-center gap-3">
+          <Link
+            href="/workspace"
+            aria-label="Return to workspace overview"
+            className="focus-visible:ring-primary flex min-w-0 items-center gap-3 rounded-lg focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+          >
             <CompanyLogo
               size={36}
               className="rounded-full bg-white p-0.5"
@@ -39,7 +43,7 @@ export function FieldMobileChrome({
                 {collector.name} · {collector.role}
               </p>
             </div>
-          </div>
+          </Link>
           <div
             role="status"
             aria-label={online ? "Connection online" : "Connection offline"}

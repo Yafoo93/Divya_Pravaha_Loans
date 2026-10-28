@@ -2,7 +2,7 @@ export const fieldNavigation = [
   { label: "Assignments", href: "/field/assignments", shortLabel: "AS" },
   { label: "Receipts", href: "/field/receipts", shortLabel: "RC" },
   { label: "Handover", href: "/field/handover", shortLabel: "HO" },
-  { label: "Account", href: "/field/account", shortLabel: "ME" },
+  { label: "Overview", href: "/workspace", shortLabel: "OV" },
 ] as const;
 
 export function isFieldNavigationActive(pathname: string, href: string) {

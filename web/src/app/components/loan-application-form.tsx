@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { calculateLoanTerms, type LoanFrequency } from "@/lib/loan-application";
 import { formatGhsFromPesewas } from "@/lib/formatters";
@@ -39,10 +39,6 @@ export function LoanApplicationForm({
     [borrowerId, memberships],
   );
   const [groupId, setGroupId] = useState(availableGroups[0]?.groupId ?? "");
-  useEffect(() => {
-    if (!availableGroups.some((item) => item.groupId === groupId))
-      setGroupId(availableGroups[0]?.groupId ?? "");
-  }, [availableGroups, groupId]);
   const selected = availableGroups.find((item) => item.groupId === groupId);
   const groupReady = Boolean(
     selected &&
@@ -133,7 +129,14 @@ export function LoanApplicationForm({
             label="Borrower"
             required
             value={borrowerId}
-            onChange={(event) => setBorrowerId(event.target.value)}
+            onChange={(event) => {
+              const nextBorrowerId = event.target.value;
+              setBorrowerId(nextBorrowerId);
+              setGroupId(
+                memberships.find((item) => item.id === nextBorrowerId)
+                  ?.groupId ?? "",
+              );
+            }}
           >
             {borrowers.map((borrower) => (
               <option key={borrower.id} value={borrower.id}>

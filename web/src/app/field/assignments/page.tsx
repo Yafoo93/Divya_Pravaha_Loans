@@ -67,6 +67,12 @@ export default async function FieldAssignmentsPage() {
 
   return (
     <main className="px-4 py-6">
+      <Link
+        href="/workspace"
+        className="border-border bg-surface text-foreground hover:border-primary hover:text-primary mb-5 inline-flex min-h-11 items-center rounded-xl border px-4 text-sm font-bold transition"
+      >
+        &larr; Back to overview
+      </Link>
       <p className="text-primary text-[10px] font-bold tracking-wider uppercase">
         {formatAccraLongDate(new Date())} · Collection route
       </p>
