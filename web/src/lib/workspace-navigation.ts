@@ -30,6 +30,12 @@ export const workspaceNavigation: readonly WorkspaceNavigationItem[] = [
     allowedRoles: allStaff,
   },
   {
+    label: "Notifications",
+    href: "/workspace/notifications",
+    shortLabel: "NT",
+    allowedRoles: allStaff,
+  },
+  {
     label: "Borrowers",
     href: "/workspace/borrowers",
     shortLabel: "BR",

@@ -9,6 +9,7 @@ const systemAdminAllowedPermissions = new Set([
 export const workspacePagePermissions = {
   "/field/assignments": ["view_assignments"],
   "/workspace": [],
+  "/workspace/notifications": [],
   "/workspace/borrowers": [
     "manage_borrower_drafts",
     "record_verification",

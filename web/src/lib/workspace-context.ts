@@ -42,5 +42,4 @@ export const prototypeWorkspace = {
   currency: "GHS",
   displayDate: new Date("2026-10-18T12:00:00Z"),
   managers: prototypeManagers,
-  unreadNotifications: 3,
 } as const;
