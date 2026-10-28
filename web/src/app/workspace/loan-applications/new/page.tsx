@@ -32,9 +32,36 @@ export default async function NewLoanApplicationPage() {
           },
         },
       },
-      group: { status: "ACTIVE", branchId: { in: [...scope.branchIds] } },
+      group: { branchId: { in: [...scope.branchIds] } },
     },
-    include: { borrower: true, group: true },
+    include: {
+      borrower: {
+        include: {
+          verifications: { where: { status: "VERIFIED" }, take: 1 },
+        },
+      },
+      group: {
+        include: {
+          memberships: {
+            where: { status: "ACTIVE" },
+            include: {
+              borrower: {
+                include: {
+                  verifications: {
+                    where: { status: "VERIFIED" },
+                    take: 1,
+                  },
+                },
+              },
+            },
+          },
+          agreements: {
+            where: { status: "SIGNED", signedAt: { not: null } },
+            take: 1,
+          },
+        },
+      },
+    },
     orderBy: { borrower: { legalName: "asc" } },
   });
   return (
@@ -48,12 +75,22 @@ export default async function NewLoanApplicationPage() {
           currency="GHS"
         />
         <LoanApplicationForm
-          borrowers={memberships.map((m) => ({
+          memberships={memberships.map((m) => ({
             id: m.borrower.id,
             customerId: m.borrower.customerId,
             legalName: m.borrower.legalName,
             groupId: m.group.id,
             groupName: m.group.name,
+            groupNumber: m.group.groupNumber,
+            groupStatus: m.group.status,
+            activeMemberCount: m.group.memberships.length,
+            verifiedConsentingMemberCount: m.group.memberships.filter(
+              (member) =>
+                member.hasConsented && member.borrower.verifications.length > 0,
+            ).length,
+            borrowerVerifiedAndConsenting:
+              m.hasConsented && m.borrower.verifications.length > 0,
+            hasSignedAgreement: m.group.agreements.length > 0,
           }))}
         />
       </div>

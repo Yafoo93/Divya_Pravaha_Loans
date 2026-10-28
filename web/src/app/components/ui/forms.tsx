@@ -49,7 +49,7 @@ function FieldShell({
 }
 
 const controlClass =
-  "border-border bg-surface text-foreground placeholder:text-muted/70 focus:border-primary focus:ring-primary/20 min-h-11 w-full rounded-lg border px-3 py-2 text-sm outline-none transition focus:ring-4 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-muted disabled:opacity-75";
+  "border-slate-300 bg-white text-foreground placeholder:text-slate-400 shadow-sm focus:border-primary focus:ring-primary/20 min-h-12 w-full rounded-lg border px-3 py-2.5 text-sm outline-none transition focus:ring-4 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-muted disabled:opacity-75";
 
 type InputFieldProps = Omit<InputHTMLAttributes<HTMLInputElement>, "id"> & {
   id: string;

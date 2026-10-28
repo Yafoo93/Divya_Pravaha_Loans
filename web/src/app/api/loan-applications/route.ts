@@ -111,21 +111,35 @@ export async function POST(request: NextRequest) {
       { status: 409 },
     );
   const agreement = group.agreements[0];
-  const guarantorBorrowerIds = group.memberships
-    .filter(
-      (membership) =>
-        membership.borrowerId !== borrower.id &&
-        membership.borrower.verifications.length > 0,
-    )
-    .map((membership) => membership.borrowerId);
-  if (!agreement || guarantorBorrowerIds.length === 0)
+  const verifiedConsentingMembers = group.memberships.filter(
+    (membership) =>
+      membership.hasConsented && membership.borrower.verifications.length > 0,
+  );
+  const selectedBorrowerIsEligible = group.memberships.some(
+    (membership) =>
+      membership.borrowerId === borrower.id &&
+      membership.hasConsented &&
+      membership.borrower.verifications.length > 0,
+  );
+  if (verifiedConsentingMembers.length < 5 || !agreement)
     return NextResponse.json(
       {
         error:
-          "A signed agreement and verified consenting guarantors are required.",
+          "The group must have at least five active, verified, consenting members and a signed joint-liability agreement.",
       },
       { status: 409 },
     );
+  if (!selectedBorrowerIsEligible)
+    return NextResponse.json(
+      {
+        error:
+          "The selected borrower must be verified and consenting in this group.",
+      },
+      { status: 409 },
+    );
+  const guarantorBorrowerIds = verifiedConsentingMembers
+    .filter((membership) => membership.borrowerId !== borrower.id)
+    .map((membership) => membership.borrowerId);
   const [activeLoan, openApplication, product] = await Promise.all([
     db.loan.findFirst({
       where: { borrowerId: borrower.id, status: "ACTIVE" },
